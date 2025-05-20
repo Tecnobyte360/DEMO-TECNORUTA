@@ -114,28 +114,7 @@
                         </li>
                     </ul>
                 </div>
-                <!-- Recent pages -->
-                <div class="mb-3 last:mb-0">
-                    <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase px-2 mb-2">Recent pages</div>
-                    <ul class="text-sm">
-                        <li>
-                            <a class="flex items-center p-2 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700/20 rounded-lg" href="#0" @click="searchOpen = false" @focus="searchOpen = true" @focusout="searchOpen = false">
-                                <svg class="fill-current text-gray-400 dark:text-gray-500 shrink-0 mr-3" width="16" height="16" viewBox="0 0 16 16">
-                                    <path d="M14 0H2c-.6 0-1 .4-1 1v14c0 .6.4 1 1 1h8l5-5V1c0-.6-.4-1-1-1zM3 2h10v8H9v4H3V2z" />
-                                </svg>
-                                <span><span class="font-medium">Messages</span> - <span class="text-gray-600 dark:text-gray-400">Conversation / … / Mike Mills</span></span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="flex items-center p-2 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700/20 rounded-lg" href="#0" @click="searchOpen = false" @focus="searchOpen = true" @focusout="searchOpen = false">
-                                <svg class="fill-current text-gray-400 dark:text-gray-500 shrink-0 mr-3" width="16" height="16" viewBox="0 0 16 16">
-                                    <path d="M14 0H2c-.6 0-1 .4-1 1v14c0 .6.4 1 1 1h8l5-5V1c0-.6-.4-1-1-1zM3 2h10v8H9v4H3V2z" />
-                                </svg>
-                                <span><span class="font-medium">Messages</span> - <span class="text-gray-600 dark:text-gray-400">Conversation / … / Eva Patrick</span></span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                
             </div>
         </div>
     </div>                    

@@ -3,13 +3,30 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DataFeedController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\CustomerController;
+
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\Usuarios\UsuariosController;
+use App\Livewire\Bodegas\Bodega;
+use App\Livewire\Bodegas\Edit;
+use App\Livewire\Categoria\Categorias;
+use App\Livewire\Categorias\IndexCategorias;
+use App\Livewire\Inventario\EntradasMercancia;
+use App\Livewire\MaestroRutas\MaestroRutas;
+use App\Livewire\OperacionesStock\OperacionesStock;
+use App\Livewire\Productos\Productos;
+use App\Livewire\RutaDisponiblesConductor\RutasDisponiblesConductor;
+use App\Livewire\Usuarios\Usuarios;
+use App\Livewire\Seguridad\Roles\Index as RolesIndex;
+use App\Livewire\Seguridad\Roles\Create as RolesCreate;
+use App\Livewire\Seguridad\Roles\Edit as RolesEdit;
+use App\Livewire\SocioNegocio\SocioNegocios;
+use App\Livewire\SubCategorias\SubCategorias;
+use App\Livewire\Vehiculos\Vehiculo;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,30 +49,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('analytics');
     Route::get('/dashboard/fintech', [DashboardController::class, 'fintech'])->name('fintech');
-    Route::get('/ecommerce/customers', [CustomerController::class, 'index'])->name('customers');
+
     Route::get('/ecommerce/orders', [OrderController::class, 'index'])->name('orders');
     Route::get('/ecommerce/invoices', [InvoiceController::class, 'index'])->name('invoices');
-    Route::get('/ecommerce/shop', function () {
-        return view('pages/ecommerce/shop');
-    })->name('shop');    
-    Route::get('/ecommerce/shop-2', function () {
-        return view('pages/ecommerce/shop-2');
-    })->name('shop-2');     
-    Route::get('/ecommerce/product', function () {
-        return view('pages/ecommerce/product');
-    })->name('product');
-    Route::get('/ecommerce/cart', function () {
-        return view('pages/ecommerce/cart');
-    })->name('cart');    
-    Route::get('/ecommerce/cart-2', function () {
-        return view('pages/ecommerce/cart-2');
-    })->name('cart-2');    
-    Route::get('/ecommerce/cart-3', function () {
-        return view('pages/ecommerce/cart-3');
-    })->name('cart-3');    
-    Route::get('/ecommerce/pay', function () {
-        return view('pages/ecommerce/pay');
-    })->name('pay');     
+   
     Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns');
     Route::get('/community/users-tabs', [MemberController::class, 'indexTabs'])->name('users-tabs');
     Route::get('/community/users-tiles', [MemberController::class, 'indexTiles'])->name('users-tiles');
@@ -194,4 +191,31 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::fallback(function() {
         return view('pages/utility/404');
     });    
+
+
+
+    Route::get('/' . config('app.name') . '/Usuarios', Usuarios::class)->name('Usuarios');
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/roles', RolesIndex::class)->name('roles.index');
+        Route::get('/roles/crear', RolesCreate::class)->name('roles.create');
+        Route::get('/roles/editar/{id}', RolesEdit::class)->name('roles.edit');
+    });
+
+    Route::get('/' . config('app.name') . '/Bodegas', Bodega::class)->name('Bodegas');
+    Route::get('/' . config('app.name') . '/SociosNegocio', SocioNegocios::class)->name('SociosNegocio');
+    Route::get('/socio-negocio/{id}/edit', \App\Livewire\SocioNegocio\Edit::class)->name('socio-negocio.edit');
+    Route::get('/productos', Productos::class)->name('productos.index');
+    Route::get('/categorias', Categorias::class)->name('categorias.index');
+    Route::get('/subcategorias', SubCategorias::class)->name('subcategorias.index');
+    Route::get('/indexcategorias', IndexCategorias::class)->name('indexcategorias');
+    
+
+    //Inventario
+
+    Route::get('/EntradasMercancia', EntradasMercancia::class)->name('entradas.mercancia');
+    Route::get('/Operaciones-stock', OperacionesStock::class)->name('Operaciones-stock');
+    Route::get('/Maestro-Rutas', MaestroRutas::class)->name('Maestro-Rutas');
+    Route::get('/Vehiculos', Vehiculo::class)->name('Vehiculos');
+     Route::get('/RutasDisponibles', RutasDisponiblesConductor::class)->name('RutasDisponibles');
+   
 });

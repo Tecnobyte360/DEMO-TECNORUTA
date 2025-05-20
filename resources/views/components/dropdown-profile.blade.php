@@ -32,11 +32,11 @@
     >
         <div class="pt-0.5 pb-2 px-3 mb-1 border-b border-gray-200 dark:border-gray-700/60">
             <div class="font-medium text-gray-800 dark:text-gray-100">{{ Auth::user()->name }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 italic">Administrator</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 italic">Administrador</div>
         </div>
         <ul>
             <li>
-                <a class="font-medium text-sm text-violet-500 hover:text-violet-600 dark:hover:text-violet-400 flex items-center py-1 px-3" href="{{ route('profile.show') }}" @click="open = false" @focus="open = true" @focusout="open = false">Settings</a>
+                <a class="font-medium text-sm text-violet-500 hover:text-violet-600 dark:hover:text-violet-400 flex items-center py-1 px-3" href="{{ route('profile.show') }}" @click="open = false" @focus="open = true" @focusout="open = false">Autogestión</a>
             </li>
             <li>
                 <form method="POST" action="{{ route('logout') }}" x-data>
@@ -48,7 +48,7 @@
                         @focus="open = true"
                         @focusout="open = false"
                     >
-                        {{ __('Sign Out') }}
+                        {{ __('Cerrar Sesión') }}
                     </a>
                 </form>                                
             </li>
