@@ -15,54 +15,57 @@
         </button>
     </div>
 
-    <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-sm sm:text-base">
-            <thead>
-                <tr class="bg-gradient-to-r from-violet-500 to-indigo-600 dark:from-indigo-700 dark:to-indigo-900 text-white">
-                    <th class="px-4 py-2 text-left">Id</th>
-                    <th class="px-4 py-2 text-left">Nombre</th>
-                    <th class="px-4 py-2 text-left">Ubicación</th>
-                    <th class="px-4 py-2 text-center">Estado</th>
-                    <th class="px-4 py-2 text-center">Acciones</th>
+   <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md">
+    <table class="w-full border-collapse text-sm sm:text-base bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl">
+        <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white text-xs uppercase tracking-wider">
+            <tr>
+                <th class="px-4 py-3 text-left"><i class="fas fa-hashtag mr-1"></i> ID</th>
+                <th class="px-4 py-3 text-left"><i class="fas fa-warehouse mr-1"></i> Nombre</th>
+                <th class="px-4 py-3 text-left"><i class="fas fa-map-marker-alt mr-1"></i> Ubicación</th>
+                <th class="px-4 py-3 text-center"><i class="fas fa-toggle-on mr-1"></i> Estado</th>
+                <th class="px-4 py-3 text-center"><i class="fas fa-cogs mr-1"></i> Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+            @foreach ($bodegas as $bodega)
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200">
+                    <td class="px-4 py-2">{{ $bodega->id }}</td>
+                    <td class="px-4 py-2">{{ $bodega->nombre }}</td>
+                    <td class="px-4 py-2">{{ $bodega->ubicacion }}</td>
+                    <td class="px-4 py-2 text-center">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer"
+                                   x-data="{ activo: {{ $bodega->activo ? 'true' : 'false' }} }"
+                                   x-model="activo"
+                                   @change="$wire.toggleEstado({{ $bodega->id }})"
+                                   :checked="activo">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:ring-2 peer-focus:ring-violet-400 rounded-full peer
+                                        peer-checked:after:translate-x-full peer-checked:after:border-white
+                                        after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300
+                                        after:border after:rounded-full after:h-5 after:w-5 after:transition-all
+                                        peer-checked:bg-green-600">
+                            </div>
+                        </label>
+                    </td>
+                    <td class="px-4 py-2 flex justify-center gap-2">
+                        <button wire:click="editar({{ $bodega->id }})" 
+                                @click="$dispatch('open-edit-modal')" 
+                                class="text-blue-500 hover:text-blue-700 transition p-2 rounded-lg" 
+                                title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button wire:click="eliminar({{ $bodega->id }})" 
+                                class="text-red-500 hover:text-red-700 transition p-2 rounded-lg" 
+                                title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                @foreach ($bodegas as $bodega)
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-4 py-2">{{ $bodega->id }}</td>
-                        <td class="px-4 py-2">{{ $bodega->nombre }}</td>
-                        <td class="px-4 py-2">{{ $bodega->ubicacion }}</td>
-                        <td class="px-4 py-2 text-center">
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer"
-                                       x-data="{ activo: {{ $bodega->activo ? 'true' : 'false' }} }"
-                                       x-model="activo"
-                                       @change="$wire.toggleEstado({{ $bodega->id }})"
-                                       :checked="activo">
-                                <div class="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer
-                                            peer-checked:after:translate-x-full peer-checked:after:border-white
-                                            after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300
-                                            after:border after:rounded-full after:h-5 after:w-5 after:transition-all
-                                            peer-checked:bg-green-600">
-                                </div>
-                            </label>
-                        </td>
+            @endforeach
+        </tbody>
+    </table>
+</div>
 
-                        <td class="px-4 py-2 flex justify-center space-x-2">
-                            <button wire:click="editar({{ $bodega->id }})" 
-                                    @click="$dispatch('open-edit-modal')" 
-                                    class="text-blue-500 hover:text-blue-700 transition p-2 rounded-lg" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button wire:click="eliminar({{ $bodega->id }})" class="text-red-500 hover:text-red-700 transition p-2 rounded-lg" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
 
     <!-- Modal Crear -->
     <div 

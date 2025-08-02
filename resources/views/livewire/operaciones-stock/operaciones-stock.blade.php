@@ -10,12 +10,7 @@
                 ➡️ Entradas Mercancía
             </button>
 
-            <button
-                wire:click="$set('tab', 'listado')"
-                class="py-2 px-4 text-sm font-bold focus:outline-none {{ $tab === 'listado' ? 'border-b-4 border-violet-600 text-violet-600' : 'text-gray-600 dark:text-gray-400 hover:text-violet-600' }}"
-            >
-                📜 Salidas Mercancia
-            </button>
+            
         </nav>
     </div>
 

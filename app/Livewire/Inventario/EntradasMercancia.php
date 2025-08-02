@@ -9,6 +9,7 @@ use App\Models\Productos\Producto;
 use App\Models\SocioNegocio\SocioNegocio;
 use App\Models\bodegas;
 use Illuminate\Support\Facades\DB;
+use Masmerise\Toaster\PendingToast;
 
 class EntradasMercancia extends Component
 {
@@ -18,6 +19,7 @@ class EntradasMercancia extends Component
     public $entradasMercancia;
     public $detalleEntrada;
     public $isLoading = false;
+    public $mostrarDetalle = false;
 
     public function mount()
     {
@@ -26,6 +28,36 @@ class EntradasMercancia extends Component
         $this->socios = SocioNegocio::all();
         $this->entradasMercancia = EntradaMercancia::with('socioNegocio')->latest()->get();
         $this->entradas = [];
+    }
+
+    public function actualizarProductoDesdeNombre($index)
+    {
+        $nombre = $this->entradas[$index]['producto_nombre'] ?? null;
+
+        if ($nombre) {
+            $producto = Producto::where('nombre', $nombre)->first();
+
+            if ($producto) {
+                $this->entradas[$index]['producto_id'] = $producto->id;
+                $this->entradas[$index]['descripcion'] = $producto->descripcion ?? $producto->nombre;
+
+              
+                $ultimaEntrada = \App\Models\Inventario\EntradaDetalle::where('producto_id', $producto->id)
+                    ->latest('created_at')
+                    ->first();
+
+                if ($ultimaEntrada) {
+                    $this->entradas[$index]['precio_unitario'] = $ultimaEntrada->precio_unitario;
+                } else {
+                    // Si no hay entrada previa, dejar en 0 o el valor actual
+                    $this->entradas[$index]['precio_unitario'] = 0;
+                }
+            } else {
+                $this->entradas[$index]['producto_id'] = null;
+                $this->entradas[$index]['descripcion'] = '';
+                $this->entradas[$index]['precio_unitario'] = 0;
+            }
+        }
     }
 
     public function render()
@@ -37,6 +69,7 @@ class EntradasMercancia extends Component
     {
         $this->entradas[] = [
             'producto_id' => '',
+            'producto_nombre' => '',
             'descripcion' => '',
             'cantidad' => 1,
             'bodega_id' => '',
@@ -117,22 +150,46 @@ class EntradasMercancia extends Component
 
             $this->reset(['fecha_contabilizacion', 'socio_negocio_id', 'lista_precio', 'observaciones', 'entradas']);
             $this->entradasMercancia = EntradaMercancia::with('socioNegocio')->latest()->get();
-            session()->flash('message', '✅ Entrada registrada exitosamente.');
+
+            PendingToast::create()
+                ->success()
+                ->message('✅ Entrada registrada exitosamente.')
+                ->duration(5000);
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', '❌ Error al guardar: ' . $e->getMessage());
+
+            PendingToast::create()
+                ->error()
+                ->message('❌ Error al guardar: ' . $e->getMessage())
+                ->duration(8000);
         } finally {
             $this->isLoading = false;
         }
     }
-
     public function cancelarEntrada()
     {
         $this->reset(['fecha_contabilizacion', 'socio_negocio_id', 'lista_precio', 'observaciones', 'entradas']);
     }
 
-    public function verDetalle($entradaId)
-    {
-        $this->detalleEntrada = EntradaMercancia::with('detalles.producto', 'detalles.bodega')->find($entradaId);
+  public function verDetalle($entradaId)
+{
+    $entrada = EntradaMercancia::with('detalles.producto', 'detalles.bodega', 'socioNegocio')->find($entradaId);
+
+    if ($entrada) {
+        $this->detalleEntrada = $entrada;
+        $this->mostrarDetalle = true;
+
+        // 🔔 Dispara evento para Alpine
+     $this->dispatch('abrirModalDetalle');
+    } else {
+        $this->detalleEntrada = null;
+        $this->mostrarDetalle = false;
+
+        PendingToast::create()
+            ->error()
+            ->message('Entrada no encontrada.')
+            ->duration(5000);
     }
+}
+
 }

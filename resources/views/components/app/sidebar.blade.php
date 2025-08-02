@@ -61,6 +61,7 @@
                        
                     </li>
                     <!-- E-Commerce -->
+                    @if(auth()->user()->hasRole('administrador'))
                     <li class="pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-linear-to-r @if(in_array(Request::segment(1), ['ecommerce'])){{ 'from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]' }}@endif" x-data="{ open: {{ in_array(Request::segment(1), ['ecommerce']) ? 1 : 0 }} }">
                         <a class="block text-gray-800 dark:text-gray-100 truncate transition @if(!in_array(Request::segment(1), ['ecommerce'])){{ 'hover:text-gray-900 dark:hover:text-white' }}@endif" href="#0" @click.prevent="open = !open; sidebarExpanded = true">
                             <div class="flex items-center justify-between">
@@ -96,6 +97,12 @@
                                            <a href="{{ route('Operaciones-stock') }}" class="block text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
                                                 Entradas de stock
                                             </a>
+                                             <a href="{{ route('SalidaMercancia') }}" class="block text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
+                                                Salida mercancia
+                                            </a>
+                                            <a href="{{ route('DevolucionMercancia') }}" class="block text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
+                                               Devolucion de mercancia
+                                            </a>
 
                                         </li>
                                         {{-- <li>
@@ -129,6 +136,7 @@
                             </ul>
                         </div>
                     </li>
+                  
                     <!-- Community -->
                     <li class="pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-linear-to-r @if(in_array(Request::segment(1), ['community'])){{ 'from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]' }}@endif" x-data="{ open: {{ in_array(Request::segment(1), ['community']) ? 1 : 0 }} }">
                         <a class="block text-gray-800 dark:text-gray-100 truncate transition @if(!in_array(Request::segment(1), ['community'])){{ 'hover:text-gray-900 dark:hover:text-white' }}@endif" href="#0" @click.prevent="open = !open; sidebarExpanded = true">
@@ -194,6 +202,8 @@
                             </ul>
                         </div>
                     </li>
+                      @endif
+                        @if(auth()->user()->hasRole('administrador')  || auth()->user()->hasRole('rutas') )
                    <li class="pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-linear-to-r @if(in_array(Request::segment(1), ['finance'])){{ 'from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]' }}@endif" x-data="{ open: {{ in_array(Request::segment(1), ['finance']) ? 1 : 0 }} }">
                         <a class="block text-gray-800 dark:text-gray-100 truncate transition @if(!in_array(Request::segment(1), ['finance'])){{ 'hover:text-gray-900 dark:hover:text-white' }}@endif" href="#0" @click.prevent="open = !open; sidebarExpanded = true">
                             <div class="flex items-center justify-between">
@@ -202,7 +212,7 @@
                                         <path d="M6 0a6 6 0 0 0-6 6c0 1.077.304 2.062.78 2.912a1 1 0 1 0 1.745-.976A3.945 3.945 0 0 1 2 6a4 4 0 0 1 4-4c.693 0 1.344.194 1.936.525A1 1 0 1 0 8.912.779 5.944 5.944 0 0 0 6 0Z" />
                                         <path d="M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm-4 6a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
                                     </svg>
-                                    <span class="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Rutas Disponibles   </span>
+                                    <span class="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Rutas Disponibles</span>
                                 </div>
                                 <!-- Icon -->
                                 <div class="flex shrink-0 ml-2 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
@@ -223,6 +233,51 @@
                             </ul>
                         </div>
                     </li>
+                    @endif
+                          @if(auth()->user()->hasRole('administrador') )
+                    <li class="pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-linear-to-r @if(in_array(Request::segment(1), ['finance'])){{ 'from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]' }}@endif" x-data="{ open: {{ in_array(Request::segment(1), ['finance']) ? 1 : 0 }} }">
+                        <a class="block text-gray-800 dark:text-gray-100 truncate transition @if(!in_array(Request::segment(1), ['finance'])){{ 'hover:text-gray-900 dark:hover:text-white' }}@endif" href="#0" @click.prevent="open = !open; sidebarExpanded = true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <svg class="shrink-0 fill-current @if(in_array(Request::segment(1), ['finance'])){{ 'text-violet-500' }}@else{{ 'text-gray-400 dark:text-gray-500' }}@endif" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+                                        <path d="M6 0a6 6 0 0 0-6 6c0 1.077.304 2.062.78 2.912a1 1 0 1 0 1.745-.976A3.945 3.945 0 0 1 2 6a4 4 0 0 1 4-4c.693 0 1.344.194 1.936.525A1 1 0 1 0 8.912.779 5.944 5.944 0 0 0 6 0Z" />
+                                        <path d="M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm-4 6a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
+                                    </svg>
+                                    <span class="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Finanzas   </span>
+                                </div>
+                                <!-- Icon -->
+                                <div class="flex shrink-0 ml-2 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                    <svg class="w-3 h-3 shrink-0 ml-1 fill-current text-gray-400 dark:text-gray-500 @if(in_array(Request::segment(1), ['finance'])){{ 'rotate-180' }}@endif" :class="open ? 'rotate-180' : 'rotate-0'" viewBox="0 0 12 12">
+                                        <path d="M5.9 11.4L.5 6l1.4-1.4 4 4 4-4L11.3 6z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="lg:hidden lg:sidebar-expanded:block 2xl:block">
+                            <ul class="pl-8 mt-1 @if(!in_array(Request::segment(1), ['finance'])){{ 'hidden' }}@endif" :class="open ? 'block!' : 'hidden'">
+                                <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('Finanzas')){{ 'text-violet-500!' }}@endif" href="{{ route('Finanzas') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Finanzas Dulceleche</span>
+                                    </a>
+                                </li>
+                               
+                            </ul>
+                             <ul class="pl-8 mt-1 @if(!in_array(Request::segment(1), ['finance'])){{ 'hidden' }}@endif" :class="open ? 'block!' : 'hidden'">
+                                <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('Gastos')){{ 'text-violet-500!' }}@endif" href="{{ route('Gastos') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Gastos</span>
+                                    </a>
+                                </li>
+                                  <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('tiposGastos')){{ 'text-violet-500!' }}@endif" href="{{ route('tiposGastos') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Tipos Gastos</span>
+                                    </a>
+                                </li>
+                               
+                            </ul>
+                        </div>
+                    </li>
+                     @endif
                 </ul>
 
 
@@ -235,6 +290,7 @@
                 </h3>
                 <ul class="mt-3">
                     <!-- Authentication -->
+                       @if(auth()->user()->hasRole('administrador') )
                      <li class="pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-linear-to-r @if(in_array(Request::segment(1), ['settings'])){{ 'from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]' }}@endif" x-data="{ open: {{ in_array(Request::segment(1), ['settings']) ? 1 : 0 }} }">
                         <a class="block text-gray-800 dark:text-gray-100 truncate transition @if(!in_array(Request::segment(1), ['settings'])){{ 'hover:text-gray-900 dark:hover:text-white' }}@endif" href="#0" @click.prevent="open = !open; sidebarExpanded = true">
                             <div class="flex items-center justify-between">
@@ -255,24 +311,37 @@
                         <div class="lg:hidden lg:sidebar-expanded:block 2xl:block">
                             <ul class="pl-8 mt-1 @if(!in_array(Request::segment(1), ['settings'])){{ 'hidden' }}@endif" :class="open ? 'block!' : 'hidden'">
                                 <li class="mb-1 last:mb-0">
-                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('account')){{ 'text-violet-500!' }}@endif" href="{{ route('account') }}">
-                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Mi cuenta</span>
+                                   
+                                </li>
+                               <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('Usuarios')) text-red-500! @endif" 
+                                    href="{{ route('Usuarios') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                            Usuarios
+                                        </span>
                                     </a>
                                 </li>
                                 <li class="mb-1 last:mb-0">
-                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('Usuarios')){{ 'text-violet-500!' }}@endif" href="{{ route('Usuarios') }}">
-                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Usuarios</span>
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('roles.index')) text-red-500! @endif" 
+                                    href="{{ route('roles.index') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                            Roles
+                                        </span>
                                     </a>
                                 </li>
                                 <li class="mb-1 last:mb-0">
-                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('apps')){{ 'text-violet-500!' }}@endif" href="{{ route('apps') }}">
-                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Roles-Permisos</span>
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('roles.index2')) text-red-500! @endif" 
+                                    href="{{ route('roles.index2') }}">
+                                        <span class="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                            Permisos
+                                        </span>
                                     </a>
                                 </li>
-                                
+                                            
                             </ul>
                         </div>
                     </li>
+                    @endif
                    
                 </ul>
             </div>

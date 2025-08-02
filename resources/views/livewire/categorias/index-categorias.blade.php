@@ -23,21 +23,34 @@
             >
                 Productos
             </button>
+            <button
+                wire:click="$set('tab', 'precios')"
+                class="py-2 px-4 text-sm font-medium {{ $tab === 'precios' ? 'border-b-2 border-violet-600' : 'text-gray-600 dark:text-gray-400' }} focus:outline-none"
+            >
+                Lista de Precios
+            </button>
+
         </nav>
     </div>
 
     <!-- Contenido según pestaña activa -->
     @if ($tab === 'categorias')
-        <div class="space-y-4">
-            <livewire:categoria.categorias />
-        </div>
-    @elseif ($tab === 'subcategorias')
-        <div class="space-y-4">
-            <livewire:sub-categorias.sub-categorias />
-        </div>
-    @elseif ($tab === 'productos')
-        <div class="space-y-4">
-            <livewire:productos.productos />
-        </div>
-    @endif
+    <div class="space-y-4">
+        <livewire:categoria.categorias />
+    </div>
+        @elseif ($tab === 'subcategorias')
+            <div class="space-y-4">
+                <livewire:sub-categorias.sub-categorias />
+            </div>
+        @elseif ($tab === 'productos')
+            <div class="space-y-4">
+                <livewire:productos.productos />
+            </div>
+        @elseif ($tab === 'precios')
+            <div class="space-y-4">
+                <livewire:productos.precios-producto />
+            </div>
+        @endif
+
+    
 </div>

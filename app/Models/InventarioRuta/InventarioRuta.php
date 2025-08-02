@@ -10,7 +10,8 @@ class InventarioRuta extends Model
 {
  protected $table = 'inventario_ruta';
 
-    protected $fillable = ['ruta_id', 'producto_id', 'bodega_id', 'cantidad'];
+protected $fillable = ['ruta_id', 'producto_id', 'bodega_id', 'cantidad', 'cantidad_inicial','cantidad_devuelta'];
+    
 
     public function ruta()
     {

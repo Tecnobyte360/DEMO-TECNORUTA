@@ -25,7 +25,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Razón Social</label>
           <input type="text" wire:model.debounce.500ms="razon_social"
                  class="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-                 required>
+                 >
           @error('razon_social') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 
@@ -34,7 +34,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">NIT/Cédula</label>
           <input type="text" wire:model.debounce.500ms="nit" oninput="this.value = this.value.replace(/[^\d]/g, '')"
                  class="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-                 required pattern="^[0-9]{6,20}$">
+                 pattern="^[0-9]{6,20}$">
           @error('nit') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 
@@ -43,7 +43,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Tipo</label>
           <select wire:model.debounce.500ms="Tipo"
                   class="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-                  required>
+                  >
             <option value="">Selecciona</option>
             <option value="C">C</option>
             <option value="P">P</option>
@@ -74,7 +74,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Correo</label>
           <input type="email" wire:model.debounce.500ms="correo"
                  class="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-                 required>
+                 >
           @error('correo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 
@@ -83,7 +83,7 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Dirección</label>
           <input type="text" wire:model.debounce.500ms="direccion"
                  class="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-                 required>
+                 >
           @error('direccion') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 

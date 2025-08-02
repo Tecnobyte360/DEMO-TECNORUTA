@@ -15,7 +15,12 @@ use App\Livewire\Bodegas\Bodega;
 use App\Livewire\Bodegas\Edit;
 use App\Livewire\Categoria\Categorias;
 use App\Livewire\Categorias\IndexCategorias;
+use App\Livewire\Finanzas\Finanzas;
+use App\Livewire\Finanzas\GastosEmpresa;
+use App\Livewire\Finanzas\TiposGasto;
+use App\Livewire\Inventario\DevolucionesMercancia;
 use App\Livewire\Inventario\EntradasMercancia;
+use App\Livewire\Inventario\Salidas;
 use App\Livewire\MaestroRutas\MaestroRutas;
 use App\Livewire\OperacionesStock\OperacionesStock;
 use App\Livewire\Productos\Productos;
@@ -24,9 +29,11 @@ use App\Livewire\Usuarios\Usuarios;
 use App\Livewire\Seguridad\Roles\Index as RolesIndex;
 use App\Livewire\Seguridad\Roles\Create as RolesCreate;
 use App\Livewire\Seguridad\Roles\Edit as RolesEdit;
+use App\Livewire\Seguridad\Roles\IndexP;
 use App\Livewire\SocioNegocio\SocioNegocios;
 use App\Livewire\SubCategorias\SubCategorias;
 use App\Livewire\Vehiculos\Vehiculo;
+use App\Models\Devoluciones\Devolucion;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,7 +59,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::get('/ecommerce/orders', [OrderController::class, 'index'])->name('orders');
     Route::get('/ecommerce/invoices', [InvoiceController::class, 'index'])->name('invoices');
-   
+
     Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns');
     Route::get('/community/users-tabs', [MemberController::class, 'indexTabs'])->name('users-tabs');
     Route::get('/community/users-tiles', [MemberController::class, 'indexTiles'])->name('users-tiles');
@@ -61,19 +68,19 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('profile');
     Route::get('/community/feed', function () {
         return view('pages/community/feed');
-    })->name('feed');     
+    })->name('feed');
     Route::get('/community/forum', function () {
         return view('pages/community/forum');
     })->name('forum');
     Route::get('/community/forum-post', function () {
         return view('pages/community/forum-post');
-    })->name('forum-post');    
+    })->name('forum-post');
     Route::get('/community/meetups', function () {
         return view('pages/community/meetups');
-    })->name('meetups');    
+    })->name('meetups');
     Route::get('/community/meetups-post', function () {
         return view('pages/community/meetups-post');
-    })->name('meetups-post');    
+    })->name('meetups-post');
     Route::get('/finance/cards', function () {
         return view('pages/finance/credit-cards');
     })->name('credit-cards');
@@ -82,7 +89,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/job/job-listing', [JobController::class, 'index'])->name('job-listing');
     Route::get('/job/job-post', function () {
         return view('pages/job/job-post');
-    })->name('job-post');    
+    })->name('job-post');
     Route::get('/job/company-profile', function () {
         return view('pages/job/company-profile');
     })->name('company-profile');
@@ -94,43 +101,43 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('tasks-kanban');
     Route::get('/tasks/list', function () {
         return view('pages/tasks/tasks-list');
-    })->name('tasks-list');       
+    })->name('tasks-list');
     Route::get('/inbox', function () {
         return view('pages/inbox');
-    })->name('inbox'); 
+    })->name('inbox');
     Route::get('/calendar', function () {
         return view('pages/calendar');
-    })->name('calendar'); 
+    })->name('calendar');
     Route::get('/settings/account', function () {
         return view('pages/settings/account');
-    })->name('account');  
+    })->name('account');
     Route::get('/settings/notifications', function () {
         return view('pages/settings/notifications');
-    })->name('notifications');  
+    })->name('notifications');
     Route::get('/settings/apps', function () {
         return view('pages/settings/apps');
     })->name('apps');
     Route::get('/settings/plans', function () {
         return view('pages/settings/plans');
-    })->name('plans');      
+    })->name('plans');
     Route::get('/settings/billing', function () {
         return view('pages/settings/billing');
-    })->name('billing');  
+    })->name('billing');
     Route::get('/settings/feedback', function () {
         return view('pages/settings/feedback');
     })->name('feedback');
     Route::get('/utility/changelog', function () {
         return view('pages/utility/changelog');
-    })->name('changelog');  
+    })->name('changelog');
     Route::get('/utility/roadmap', function () {
         return view('pages/utility/roadmap');
-    })->name('roadmap');  
+    })->name('roadmap');
     Route::get('/utility/faqs', function () {
         return view('pages/utility/faqs');
-    })->name('faqs');  
+    })->name('faqs');
     Route::get('/utility/empty-state', function () {
         return view('pages/utility/empty-state');
-    })->name('empty-state');  
+    })->name('empty-state');
     Route::get('/utility/404', function () {
         return view('pages/utility/404');
     })->name('404');
@@ -139,13 +146,13 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('knowledge-base');
     Route::get('/onboarding-01', function () {
         return view('pages/onboarding-01');
-    })->name('onboarding-01');   
+    })->name('onboarding-01');
     Route::get('/onboarding-02', function () {
         return view('pages/onboarding-02');
-    })->name('onboarding-02');   
+    })->name('onboarding-02');
     Route::get('/onboarding-03', function () {
         return view('pages/onboarding-03');
-    })->name('onboarding-03');   
+    })->name('onboarding-03');
     Route::get('/onboarding-04', function () {
         return view('pages/onboarding-04');
     })->name('onboarding-04');
@@ -163,7 +170,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('alert-page');
     Route::get('/component/modal', function () {
         return view('pages/component/modal-page');
-    })->name('modal-page'); 
+    })->name('modal-page');
     Route::get('/component/pagination', function () {
         return view('pages/component/pagination-page');
     })->name('pagination-page');
@@ -175,7 +182,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('breadcrumb-page');
     Route::get('/component/badge', function () {
         return view('pages/component/badge-page');
-    })->name('badge-page'); 
+    })->name('badge-page');
     Route::get('/component/avatar', function () {
         return view('pages/component/avatar-page');
     })->name('avatar-page');
@@ -188,15 +195,17 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/component/icons', function () {
         return view('pages/component/icons-page');
     })->name('icons-page');
-    Route::fallback(function() {
+    Route::fallback(function () {
         return view('pages/utility/404');
-    });    
+    });
 
 
 
     Route::get('/' . config('app.name') . '/Usuarios', Usuarios::class)->name('Usuarios');
     Route::middleware(['auth'])->group(function () {
-        Route::get('/roles', RolesIndex::class)->name('roles.index');
+
+        Route::get('/roles', IndexP::class)->name('roles.index');
+        Route::get('/permisos', RolesIndex::class)->name('roles.index2');
         Route::get('/roles/crear', RolesCreate::class)->name('roles.create');
         Route::get('/roles/editar/{id}', RolesEdit::class)->name('roles.edit');
     });
@@ -208,7 +217,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/categorias', Categorias::class)->name('categorias.index');
     Route::get('/subcategorias', SubCategorias::class)->name('subcategorias.index');
     Route::get('/indexcategorias', IndexCategorias::class)->name('indexcategorias');
-    
+
 
     //Inventario
 
@@ -216,6 +225,12 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/Operaciones-stock', OperacionesStock::class)->name('Operaciones-stock');
     Route::get('/Maestro-Rutas', MaestroRutas::class)->name('Maestro-Rutas');
     Route::get('/Vehiculos', Vehiculo::class)->name('Vehiculos');
-     Route::get('/RutasDisponibles', RutasDisponiblesConductor::class)->name('RutasDisponibles');
-   
+    Route::get('/RutasDisponibles', RutasDisponiblesConductor::class)->name('RutasDisponibles');
+    Route::get('/DevolucionMercancia', DevolucionesMercancia::class)->name('DevolucionMercancia');
+    Route::get('/SalidaMercancia', Salidas::class)->name('SalidaMercancia');
+    //finanzas
+    Route::get('/Finanzas', Finanzas::class)->name('Finanzas');
+  Route::get('/Gastos', GastosEmpresa::class)->name('Gastos');
+    Route::get('/tiposGastos', TiposGasto::class)->name('tiposGastos');
+    
 });

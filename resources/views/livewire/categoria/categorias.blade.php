@@ -83,13 +83,13 @@
                             >
                                  <i class="fas fa-edit mr-1"></i> 
                             </button>
-                            <button
+                            {{-- <button
                                 wire:click="delete({{ $cat->id }})"
                                 class="text-red-600 hover:text-red-800"
                                 title="Eliminar"
                             >
                                  <i class="fas fa-trash-alt mr-1"></i>
-                            </button>
+                            </button> --}}
                         </td>
                     </tr>
                 @empty

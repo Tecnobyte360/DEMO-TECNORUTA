@@ -54,10 +54,4 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
-
-    public function rutas()
-    {
-        return $this->belongsToMany(\App\Models\Ruta\Ruta::class, 'conductor_ruta', 'user_id', 'ruta_id');
-    }
-
 }

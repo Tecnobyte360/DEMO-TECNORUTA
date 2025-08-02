@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Masmerise\Toaster\Http\Livewire\Toaster;
 use Masmerise\Toaster\Toaster as ToasterToaster;
-
+use Illuminate\Support\Facades\Schema;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -20,8 +20,10 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-   public function boot(): void
+public function boot(): void
 {
+    Schema::defaultStringLength(191); 
+
     Livewire::component('toaster', ToasterToaster::class);
 }
 }

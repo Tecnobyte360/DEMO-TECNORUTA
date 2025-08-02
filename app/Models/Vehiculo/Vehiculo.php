@@ -16,6 +16,7 @@ class Vehiculo extends Model
         'placa',
         'modelo',
         'marca',
+         'estado'
     ];
 
     public function rutas()

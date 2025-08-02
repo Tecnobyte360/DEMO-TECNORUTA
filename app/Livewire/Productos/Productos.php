@@ -2,41 +2,30 @@
 
 namespace App\Livewire\Productos;
 
-use App\Models\bodegas;
 use Livewire\Component;
+use App\Models\bodegas;
 use App\Models\Productos\Producto;
 use App\Models\Categorias\Subcategoria;
+use Illuminate\Support\Facades\Log;
+use Masmerise\Toaster\PendingToast;
 
 class Productos extends Component
 {
-    public $productos;
-    public $subcategorias;
-    public $bodegas;
-    public $mostrarBodegas = [];
-    // Datos del producto
+    public $productos, $subcategorias, $bodegas, $mostrarBodegas = [];
     public $nombre, $descripcion, $costo, $precio, $activo = true, $subcategoria_id;
-    public $producto_id;
-    public $isEdit = false;
-    public $search = '';
+    public $producto_id, $isEdit = false, $search = '';
 
-    // Para manejar bodegas
     public $bodegaSeleccionada = '';
-    public $stockMinimo = 0;
-    public $stockMaximo = null;
+    public $stockMinimo = 0, $stockMaximo = null;
     public $stocksPorBodega = [];
 
-    // Stock Global
-    public $stockMinimoGlobal;
-    public $stockMaximoGlobal;
-
-    //validaciones
+    public $stockMinimoGlobal, $stockMaximoGlobal;
     public $erroresFormulario = false;
-
 
     public function mount()
     {
         $this->productos = collect();
-        $this->subcategorias = Subcategoria::all();
+        $this->subcategorias = Subcategoria::where('activo', true)->get();
         $this->bodegas = bodegas::where('activo', true)->get();
     }
 
@@ -56,7 +45,7 @@ class Productos extends Component
     public function agregarBodega()
     {
         if (!$this->bodegaSeleccionada) {
-            $this->dispatch('error', ['mensaje' => 'Selecciona una bodega primero.']);
+            PendingToast::create()->error()->message('Selecciona una bodega primero.')->duration(4000);
             return;
         }
 
@@ -74,59 +63,42 @@ class Productos extends Component
     {
         unset($this->stocksPorBodega[$id]);
     }
-  
-    
+
     public function store()
     {
         try {
             $this->erroresFormulario = false;
-    
+
             $this->validate([
                 'nombre' => 'required|string|max:255',
                 'descripcion' => 'nullable|string|max:500',
                 'subcategoria_id' => 'required|exists:subcategorias,id',
                 'precio' => 'required|numeric|min:0',
-                'costo' => 'required|numeric|min:0',
                 'activo' => 'required|boolean',
                 'stockMinimoGlobal' => 'nullable|integer|min:0',
                 'stockMaximoGlobal' => 'nullable|integer|min:0|gte:stockMinimoGlobal',
-            ], [
-                'nombre.required' => 'El nombre es obligatorio.',
-                'nombre.max' => 'El nombre no debe tener más de 255 caracteres.',
-                'descripcion.max' => 'La descripción no debe tener más de 500 caracteres.',
-                'subcategoria_id.required' => 'Debes seleccionar una subcategoría.',
-                'precio.required' => 'El precio es obligatorio.',
-                'precio.numeric' => 'El precio debe ser un número.',
-                'precio.min' => 'El precio debe ser mayor o igual a cero.',
-                'costo.required' => 'El costo es obligatorio.',
-                'costo.numeric' => 'El costo debe ser un número.',
-                'costo.min' => 'El costo debe ser mayor o igual a cero.',
-                'activo.required' => 'El estado activo/inactivo es obligatorio.',
-                'stockMinimoGlobal.integer' => 'El stock mínimo global debe ser un número entero.',
-                'stockMaximoGlobal.integer' => 'El stock máximo global debe ser un número entero.',
-                'stockMaximoGlobal.gte' => 'El stock máximo debe ser mayor o igual al stock mínimo.',
             ]);
-    
+
             if (Producto::where('nombre', $this->nombre)->exists()) {
                 $this->addError('nombre', 'Ya existe un producto registrado con este nombre.');
                 $this->erroresFormulario = true;
                 return;
             }
-    
+
             $this->aplicarStockGlobalSiExiste();
-    
+
             $producto = Producto::create([
                 'nombre' => $this->nombre,
                 'descripcion' => $this->descripcion,
-                'costo' => $this->costo,
                 'precio' => $this->precio,
+                   'costo' => $this->costo ?? 0, 
                 'stock' => 0,
                 'stock_minimo' => 0,
                 'stock_maximo' => null,
                 'activo' => $this->activo,
                 'subcategoria_id' => $this->subcategoria_id,
             ]);
-    
+
             foreach ($this->stocksPorBodega as $bodegaId => $stockData) {
                 $producto->bodegas()->attach($bodegaId, [
                     'stock' => 0,
@@ -134,71 +106,103 @@ class Productos extends Component
                     'stock_maximo' => $stockData['stock_maximo'] ?? null,
                 ]);
             }
-    
+
             $this->resetInput();
-            $this->dispatch('producto-creado', ['mensaje' => 'Producto creado exitosamente.']);
-        } catch (\Exception $e) {
-            $this->dispatch('error', ['mensaje' => 'Ocurrió un error al guardar el producto: ' . $e->getMessage()]);
+
+            PendingToast::create()->success()->message('Producto creado exitosamente.')->duration(5000);
+        } catch (\Throwable $e) {
+            Log::error('Error al guardar producto', ['message' => $e->getMessage()]);
+            PendingToast::create()->error()->message('Error al guardar el producto: ' . $e->getMessage())->duration(9000);
         }
     }
-    
-    
-
-
-    public function updated($propertyName)
-{
-    $this->validateOnly($propertyName, [
-        'nombre' => 'required|string|max:255',
-        'descripcion' => 'nullable|string|max:500',
-        'subcategoria_id' => 'required|exists:subcategorias,id',
-        'precio' => 'required|numeric|min:0',
-        'costo' => 'required|numeric|min:0',
-        'activo' => 'required|boolean',
-        'stockMinimoGlobal' => 'nullable|integer|min:0',
-        'stockMaximoGlobal' => 'nullable|integer|min:0|gte:stockMinimoGlobal',
-    ]);
-}
-
-
-    
-
 
     public function update()
     {
-        $this->validate([
-            'nombre' => 'required|string',
-            'subcategoria_id' => 'required|exists:subcategorias,id',
-            'precio' => 'required|numeric',
-            'costo' => 'required|numeric',
-        ]);
-
-        // Aplicar stock global si está definido
-        $this->aplicarStockGlobalSiExiste();
-
-        $producto = Producto::findOrFail($this->producto_id);
-
-        $producto->update([
-            'nombre' => $this->nombre,
-            'descripcion' => $this->descripcion,
-            'costo' => $this->costo,
-            'precio' => $this->precio,
-            'activo' => $this->activo,
-            'subcategoria_id' => $this->subcategoria_id,
-        ]);
-
-        // Actualizar las bodegas también si fuera necesario (opcional)
-        foreach ($this->stocksPorBodega as $bodegaId => $stockData) {
-            $producto->bodegas()->syncWithoutDetaching([
-                $bodegaId => [
-                    'stock_minimo' => $stockData['stock_minimo'] ?? 0,
-                    'stock_maximo' => $stockData['stock_maximo'] ?? null,
-                ]
+        try {
+            $this->validate([
+                'nombre' => 'required|string',
+                'subcategoria_id' => 'required|exists:subcategorias,id',
+                'precio' => 'required|numeric',
             ]);
+
+            $this->aplicarStockGlobalSiExiste();
+
+            $producto = Producto::findOrFail($this->producto_id);
+
+            $producto->update([
+                'nombre' => $this->nombre,
+                'descripcion' => $this->descripcion,
+                'precio' => $this->precio,
+                'activo' => $this->activo,
+                'subcategoria_id' => $this->subcategoria_id,
+            ]);
+
+            foreach ($this->stocksPorBodega as $bodegaId => $stockData) {
+                $producto->bodegas()->syncWithoutDetaching([
+                    $bodegaId => [
+                        'stock_minimo' => $stockData['stock_minimo'] ?? 0,
+                        'stock_maximo' => $stockData['stock_maximo'] ?? null,
+                    ]
+                ]);
+            }
+
+            $this->resetInput();
+
+            PendingToast::create()->success()->message('Producto actualizado exitosamente.')->duration(5000);
+        } catch (\Throwable $e) {
+            Log::error('Error al actualizar producto', [
+                'id' => $this->producto_id,
+                'message' => $e->getMessage(),
+            ]);
+
+            PendingToast::create()->error()->message('Error al actualizar el producto.')->duration(8000);
         }
+    }
 
-        $this->resetInput();
+    public function edit($id)
+    {
+        try {
+            $producto = Producto::with('bodegas')->findOrFail($id);
 
-        $this->dispatch('producto-actualizado', ['mensaje' => 'Producto actualizado exitosamente.']);
+            $this->producto_id = $producto->id;
+            $this->nombre = $producto->nombre;
+            $this->descripcion = $producto->descripcion;
+            $this->precio = $producto->precio;
+
+            $this->activo = (bool) $producto->activo;
+            $this->subcategoria_id = $producto->subcategoria_id;
+            $this->isEdit = true;
+
+            $this->stocksPorBodega = [];
+
+            foreach ($producto->bodegas as $bodega) {
+                $this->stocksPorBodega[$bodega->id] = [
+                    'stock_minimo' => $bodega->pivot->stock_minimo,
+                    'stock_maximo' => $bodega->pivot->stock_maximo,
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error al cargar producto para edición', [
+                'id' => $id,
+                'message' => $e->getMessage(),
+            ]);
+
+            PendingToast::create()->error()->message('Error al cargar el producto.')->duration(7000);
+        }
+    }
+
+
+    public function updated($propertyName)
+    {
+        $this->validateOnly($propertyName, [
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string|max:500',
+            'subcategoria_id' => 'required|exists:subcategorias,id',
+            'precio' => 'required|numeric|min:0',
+            'activo' => 'required|boolean',
+            'stockMinimoGlobal' => 'nullable|integer|min:0',
+            'stockMaximoGlobal' => 'nullable|integer|min:0|gte:stockMinimoGlobal',
+        ]);
     }
 
     private function aplicarStockGlobalSiExiste()
@@ -214,33 +218,19 @@ class Productos extends Component
     private function resetInput()
     {
         $this->reset([
-            'nombre', 'descripcion', 'costo', 'precio', 'activo', 'subcategoria_id',
-            'producto_id', 'isEdit', 'bodegaSeleccionada', 'stockMinimo', 'stockMaximo',
-            'stocksPorBodega', 'stockMinimoGlobal', 'stockMaximoGlobal'
+            'nombre',
+            'descripcion',
+            'precio',
+            'activo',
+            'subcategoria_id',
+            'producto_id',
+            'isEdit',
+            'bodegaSeleccionada',
+            'stockMinimo',
+            'stockMaximo',
+            'stocksPorBodega',
+            'stockMinimoGlobal',
+            'stockMaximoGlobal'
         ]);
     }
-
-    public function edit($id)
-{
-    $producto = Producto::with('bodegas')->findOrFail($id);
-
-    $this->producto_id = $producto->id;
-    $this->nombre = $producto->nombre;
-    $this->descripcion = $producto->descripcion;
-    $this->costo = $producto->costo;
-    $this->precio = $producto->precio;
-    $this->activo = $producto->activo;
-    $this->subcategoria_id = $producto->subcategoria_id;
-    $this->isEdit = true;
-
-    // Cargar stock por bodega del producto
-    $this->stocksPorBodega = [];
-    foreach ($producto->bodegas as $bodega) {
-        $this->stocksPorBodega[$bodega->id] = [
-            'stock_minimo' => $bodega->pivot->stock_minimo,
-            'stock_maximo' => $bodega->pivot->stock_maximo,
-        ];
-    }
-}
-
 }

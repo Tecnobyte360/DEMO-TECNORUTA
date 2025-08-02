@@ -16,9 +16,6 @@ class Producto extends Model
         'descripcion',
         'costo',
         'precio',
-        'stock',
-        'stock_minimo',
-        'stock_maximo',
         'activo',
         'subcategoria_id',
         'es_articulo_compra',
@@ -33,9 +30,12 @@ class Producto extends Model
     public function bodegas()
     {
         return $this->belongsToMany(bodegas::class, 'producto_bodega', 'producto_id', 'bodega_id')
-                    ->withPivot('stock', 'stock_minimo', 'stock_maximo')
-                    ->withTimestamps(); 
+            ->withPivot('stock', 'stock_minimo', 'stock_maximo')
+            ->withTimestamps();
     }
-    
-}
 
+    public function precios()
+    {
+        return $this->hasMany(PrecioProducto::class);
+    }
+}

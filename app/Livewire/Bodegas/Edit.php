@@ -51,11 +51,11 @@ class Edit extends Component
         );
 
         // Emitir evento para actualizar la lista de bodegas en el componente padre
-        $this->emit('bodegaUpdated');
+        $this->dispatch('bodegaUpdated');
 
         // Cerrar el modal y resetear valores
         $this->resetInput();
-        $this->emit('closeEditModal');
+        $this->dispatch('closeEditModal');
     }
 
     public function resetInput()

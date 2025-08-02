@@ -5,11 +5,13 @@ namespace App\Livewire\SocioNegocio;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use App\Models\SocioNegocio\SocioNegocio;
+use Masmerise\Toaster\PendingToast;
 
 class Edit extends Component
 {
     public $socioId;
     public $razon_social, $nit, $tipo, $telefono_fijo, $telefono_movil, $correo, $direccion, $municipio_barrio, $saldo_pendiente;
+    public $pedidosSocio = [];
 
     #[On('loadEditSocio')]
     public function loadEditSocio($id)
@@ -44,23 +46,43 @@ class Edit extends Component
             'direccion' => 'required',
         ]);
 
-        $socio = SocioNegocio::findOrFail($this->socioId);
+        try {
+            $socio = SocioNegocio::with('pedidos')->findOrFail($this->socioId);
 
-        $socio->update([
-            'razon_social' => $this->razon_social,
-            'nit' => $this->nit,
-            'tipo' => $this->tipo,
-            'telefono_fijo' => $this->telefono_fijo,
-            'telefono_movil' => $this->telefono_movil,
-            'correo' => $this->correo,
-            'direccion' => $this->direccion,
-            'municipio_barrio' => $this->municipio_barrio,
-            'saldo_pendiente' => $this->saldo_pendiente,
-        ]);
+            if ($socio->pedidos()->exists() && $this->nit !== $socio->nit) {
+                PendingToast::create()
+                    ->error()
+                    ->message('No puedes modificar el NIT de un socio con pedidos registrados.')
+                    ->duration(7000);
+                return;
+            }
 
-        session()->flash('message', 'Socio de negocio actualizado correctamente.');
-        $this->dispatch('socioActualizado'); // para refrescar el listado
-        $this->dispatchBrowserEvent('close-modal');
+            $socio->update([
+                'razon_social' => $this->razon_social,
+                'nit' => $this->nit,
+                'tipo' => $this->tipo,
+                'telefono_fijo' => $this->telefono_fijo,
+                'telefono_movil' => $this->telefono_movil,
+                'correo' => $this->correo,
+                'direccion' => $this->direccion,
+                'municipio_barrio' => $this->municipio_barrio,
+                'saldo_pendiente' => $this->saldo_pendiente,
+            ]);
+
+            PendingToast::create()
+                ->success()
+                ->message('Socio de negocio actualizado correctamente.')
+                ->duration(5000);
+
+            $this->dispatch('socioActualizado');
+            $this->dispatch('cerrar-modal-edit');
+
+        } catch (\Throwable $e) {
+            PendingToast::create()
+                ->error()
+                ->message('Ocurrió un error: ' . $e->getMessage())
+                ->duration(8000);
+        }
     }
 
     public function render()

@@ -6,6 +6,7 @@ use App\Models\SocioNegocio\SocioNegocio;
 use Illuminate\Database\QueryException;
 use Livewire\Component;
 use Livewire\Attributes\On;
+use Masmerise\Toaster\PendingToast;
 
 class Create extends Component
 {
@@ -29,8 +30,6 @@ class Create extends Component
         $this->validateOnly($propertyName);
     }
 
-  
-
     public function save()
     {
         $this->validate([
@@ -42,20 +41,18 @@ class Create extends Component
             'correo'           => 'required|email|max:255',
             'municipio_barrio' => 'required|string|max:255',
             'saldo_pendiente'  => 'nullable|numeric|min:0',
-
         ], [
-            'razon_social.required' => 'La razón social es obligatoria.',
+            'razon_social.required' => 'La razon social es obligatoria.',
             'nit.required'          => 'El NIT es obligatorio.',
             'nit.unique'            => 'Ya existe un socio de negocio con el NIT ingresado.',
-            'telefono_fijo.digits_between' => 'El teléfono fijo debe tener entre 7 y 10 dígitos.',
-            'telefono_movil.digits' => 'El teléfono móvil debe tener exactamente 10 dígitos.',
-            'direccion.required'    => 'La dirección es obligatoria.',
+            'telefono_fijo.digits_between' => 'El telefono fijo debe tener entre 7 y 10 digitos.',
+            'telefono_movil.digits' => 'El telefono movil debe tener exactamente 10 digitos.',
+            'direccion.required'    => 'La direccion es obligatoria.',
             'correo.required'       => 'El correo es obligatorio.',
-            'correo.email'          => 'El correo debe ser una dirección válida.',
+            'correo.email'          => 'El correo debe ser una direccion valida.',
             'municipio_barrio.required' => 'El municipio o barrio es obligatorio.',
-            
         ]);
-    
+
         try {
             SocioNegocio::create([
                 'razon_social'     => $this->razon_social,
@@ -68,32 +65,30 @@ class Create extends Component
                 'saldo_pendiente'  => $this->saldo_pendiente,
                 'Tipo'             => $this->Tipo,
             ]);
-    
-            session()->flash('message', 'Socio de negocio creado exitosamente!');
+
+            PendingToast::create()
+                ->success()
+                ->message('Socio de negocio creado exitosamente!')
+                ->duration(5000);
+
             $this->reset([
                 'razon_social', 'nit', 'telefono_fijo', 'telefono_movil',
                 'direccion', 'correo', 'municipio_barrio', 'saldo_pendiente', 'Tipo'
             ]);
-            $this->emitUp('refreshList');
-    
-        } catch (\Exception $e) {
-            session()->flash('error', 'Ocurrió un error inesperado: ' . $this->formatearError($e->getMessage()));
+            $this->dispatch('refreshList');
+
+        } catch (\Throwable $e) {
+            PendingToast::create()
+                ->error()
+                ->message('Ocurrio un error inesperado: ' . $this->formatearError($e->getMessage()))
+                ->duration(8000);
         }
     }
-    
-    
-    /**
-     * Devuelve un mensaje más limpio del error SQL.
-     */
+
     protected function formatearError($mensaje)
     {
-        // Puedes hacer más limpia esta función según lo que quieras mostrar
-        // Aquí simplemente eliminamos detalles innecesarios
         return preg_replace('/SQLSTATE\[.*?\]: /', '', $mensaje);
     }
-    
-    
-    
 
     public function render()
     {

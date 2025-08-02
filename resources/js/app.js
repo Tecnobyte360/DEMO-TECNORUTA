@@ -21,7 +21,7 @@ import dashboardCard06 from './components/dashboard-card-06';
 import dashboardCard08 from './components/dashboard-card-08';
 import dashboardCard09 from './components/dashboard-card-09';
 import dashboardCard11 from './components/dashboard-card-11';
-
+import '../../vendor/masmerise/livewire-toaster/resources/js';
 // Define Chart.js default settings
 /* eslint-disable prefer-destructuring */
 Chart.defaults.font.family = '"Inter", sans-serif';

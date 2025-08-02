@@ -42,12 +42,9 @@
 
     <!-- Footer -->
     <div class="pt-5 mt-6 border-t border-gray-200 dark:border-gray-700/60 text-center">
-        <p class="text-sm">
-            {{ __('Don\'t have an account?') }} 
-            <a class="font-medium text-violet-500 hover:text-violet-600" href="{{ route('register') }}">{{ __('Sign Up') }}</a>
-        </p>
+       
 
-        <!-- Advertencia o Información -->
+   
      <div class="mt-5">
   <div class="bg-violet-500/20 text-white-800 px-4 py-3 rounded-lg flex items-center space-x-2">
 

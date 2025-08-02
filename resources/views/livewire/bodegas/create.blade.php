@@ -1,27 +1,35 @@
 <div>
-    @if ($mensaje)
-        <div class="p-3 mb-4 text-white bg-green-500 border border-green-600 rounded-lg flex justify-between items-center">
-            <span>{{ $mensaje }}</span>
-            <button wire:click="$set('mensaje', '')" class="text-white font-bold">X</button>
-        </div>
-    @endif
+  @if ($mensaje)
+    <div class="p-3 mb-4 rounded-lg flex justify-between items-center
+        @if ($tipoMensaje === 'success') bg-green-500 text-white
+        @elseif ($tipoMensaje === 'error') bg-red-500 text-white
+        @elseif ($tipoMensaje === 'warning') bg-yellow-400 text-black
+        @else bg-gray-300 text-black @endif
+    ">
+        <span class="font-semibold">{{ $mensaje }}</span>
+        <button wire:click="$set('mensaje', '')" class="font-bold ml-4">X</button>
+    </div>
+@endif
+
+
 
     <form wire:submit.prevent="guardar" class="space-y-4">
         <div>
-            <label class="block text-sm font-medium text-white">Nombre</label>
+          <label class="block text-sm font-medium text-black">Nombre</label>
             <input type="text" wire:model="nombre" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             @error('nombre') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-white">Ubicación</label>
+           <label class="block text-sm font-medium text-black">Ubicación</label>
             <input type="text" wire:model="ubicacion" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             @error('ubicacion') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 
         <div class="flex items-center">
             <input type="checkbox" wire:model="activo" class="mr-2">
-            <label class="text-sm text-white">Bodega Activa</label>
+        <label class="text-sm text-black">Bodega Activa</label>
+
         </div>
 
         <div class="flex justify-end space-x-2">
