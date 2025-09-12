@@ -174,9 +174,13 @@
                 >
                     <option value="">Selecciona una bodega...</option>
                     @foreach($bodegas as $bodega)
-                        <option value="{{ $bodega->id }}">{{ $bodega->nombre }}</option>
+                        <option value="{{ $bodega->id }}" 
+                            {{ $bodega_id == $bodega->id ? 'selected' : '' }}>
+                            {{ $bodega->nombre }}
+                        </option>
                     @endforeach
                 </select>
+
 
                 @if(!$errors->has('bodega_id') && !empty($bodega_id))
                     <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">

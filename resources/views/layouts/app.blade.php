@@ -9,7 +9,12 @@
 
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Dulce Leche') }}</title>
+
+
+      <title>{{ $empresaActual?->nombre ?? config('app.name') }}</title>
+
+<link rel="icon" type="image/png" href="{{ $empresaActual?->logo_url ?? asset('favicon.png') }}">
+
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,11 +48,15 @@
         </script>
     </head>
     <body
-        class="font-sans antialiased bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
-        :class="{ 'sidebar-expanded': sidebarExpanded }"
-        x-data="{ sidebarOpen: false, sidebarExpanded: localStorage.getItem('sidebar-expanded') == 'true' }"
-        x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', value))"
-    >
+     
+class="font-sans antialiased bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+
+    :class="{ 'sidebar-expanded': sidebarExpanded }"
+    x-data="{ sidebarOpen: false, sidebarExpanded: localStorage.getItem('sidebar-expanded') == 'true' }"
+    x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', value))"
+>
+
+    
         <!-- Ajuste inicial del sidebar -->
         <script>
             if (localStorage.getItem('sidebar-expanded') == 'true') {

@@ -10,18 +10,26 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\FacturaPosPrintController;
+use App\Http\Controllers\FacturaTicketController;
 use App\Http\Controllers\Usuarios\UsuariosController;
 use App\Livewire\Bodegas\Bodega;
 use App\Livewire\Bodegas\Edit;
 use App\Livewire\Categoria\Categorias;
 use App\Livewire\Categorias\IndexCategorias;
+use App\Livewire\ConfiguracionEmpresas\Empresas;
+use App\Livewire\Cotizaciones\Cotizacion;
+use App\Livewire\CuentasContables\PlanCuentas;
+use App\Livewire\Facturas\FacturaForm;
 use App\Livewire\Finanzas\Finanzas;
 use App\Livewire\Finanzas\GastosEmpresa;
 use App\Livewire\Finanzas\TiposGasto;
+use App\Livewire\Impuesto\Impuesto;
 use App\Livewire\Inventario\DevolucionesMercancia;
 use App\Livewire\Inventario\EntradasMercancia;
 use App\Livewire\Inventario\Salidas;
 use App\Livewire\MaestroRutas\MaestroRutas;
+use App\Livewire\NormasReparto\NormasReparto;
 use App\Livewire\OperacionesStock\OperacionesStock;
 use App\Livewire\Productos\Productos;
 use App\Livewire\RutaDisponiblesConductor\RutasDisponiblesConductor;
@@ -30,9 +38,11 @@ use App\Livewire\Seguridad\Roles\Index as RolesIndex;
 use App\Livewire\Seguridad\Roles\Create as RolesCreate;
 use App\Livewire\Seguridad\Roles\Edit as RolesEdit;
 use App\Livewire\Seguridad\Roles\IndexP;
+use App\Livewire\Serie\Serie;
 use App\Livewire\SocioNegocio\SocioNegocios;
 use App\Livewire\SubCategorias\SubCategorias;
 use App\Livewire\Vehiculos\Vehiculo;
+use App\Models\cotizaciones\cotizacione;
 use App\Models\Devoluciones\Devolucion;
 
 /*
@@ -230,7 +240,20 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/SalidaMercancia', Salidas::class)->name('SalidaMercancia');
     //finanzas
     Route::get('/Finanzas', Finanzas::class)->name('Finanzas');
-  Route::get('/Gastos', GastosEmpresa::class)->name('Gastos');
+    Route::get('/Gastos', GastosEmpresa::class)->name('Gastos');
     Route::get('/tiposGastos', TiposGasto::class)->name('tiposGastos');
-    
+    Route::get('/Empresas',Empresas::class)->name('Empresas');
+
+    //cotizaciones
+    Route::get('/Cotizaciones', Cotizacion::class)->name('Cotizaciones');
+     Route::get('/Facturacion', FacturaForm::class)->name('Facturacion');
+          Route::get('/SeriesDocumentos', Serie::class)->name('SeriesDocumentos');
+          Route::get('/facturas/{factura}/ticket', [FacturaTicketController::class, 'show'])
+        ->whereNumber('factura')
+        ->name('facturas.ticket');
+        Route::post('/facturas/{factura}/print-pos', [FacturaPosPrintController::class, 'print'])
+    ->name('facturas.print-pos');
+     Route::get('/normas-reparto', NormasReparto::class)->name('normas-reparto.index');
+    Route::get('/Cuentas-contables', PlanCuentas::class)->name('Cuentas-contables');
+       Route::get('/Impuestos', Impuesto::class)->name('Impuestos');
 });

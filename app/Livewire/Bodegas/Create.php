@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Bodegas;
 use Illuminate\Database\QueryException;
 use Exception;
+use Illuminate\Validation\Rule;
 
 class Create extends Component
 {
@@ -13,23 +14,25 @@ class Create extends Component
     public $mensaje = '';
     public $tipoMensaje = 'success';
 
-    protected function rules()
-    {
-        $rules = [
-            'nombre' => 'required|string|max:255',
-            'ubicacion' => 'required|string|max:255',
-            'activo' => 'boolean',
-        ];
+   protected function rules()
+{
+    return [
+        'nombre'       => ['required','string','max:120'],
+        'prefijo'      => ['nullable','string','max:10',
+            Rule::unique('series','prefijo')->where(fn($q)=>$q->where('nombre',$this->nombre))
+                ->ignore($this->serie_id)
+        ],
+        'rango_desde'  => ['required','integer','min:1'],
+        'rango_hasta'  => ['required','integer','gte:rango_desde'],
+        'proximo_ui'   => ['required','integer','gte:rango_desde','lte:rango_hasta'], // 👈 NUEVA
+        'longitud'     => ['required','integer','min:1','max:12'],
+        'resolucion'   => ['nullable','string','max:120'],
+        'fecha_inicio' => ['nullable','date'],
+        'fecha_fin'    => ['nullable','date','after_or_equal:fecha_inicio'],
+        'activo'       => ['boolean'],
+    ];
+}
 
-        // Validación única para nombre (evita duplicados)
-        if (!$this->bodega_id) {
-            $rules['nombre'] .= '|unique:bodegas,nombre';
-        } else {
-            $rules['nombre'] .= '|unique:bodegas,nombre,' . $this->bodega_id;
-        }
-
-        return $rules;
-    }
 
     protected $messages = [
         'nombre.required' => 'El nombre de la bodega es obligatorio.',

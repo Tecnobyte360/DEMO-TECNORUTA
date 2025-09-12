@@ -11,6 +11,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
+        <link rel="icon" type="image/png" href="{{ $empresaActual?->logo_url ?? asset('favicon.png') }}">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -35,44 +36,113 @@
             <div class="relative flex">
 
                 <!-- Content -->
-                <div class="w-full md:w-1/2">
+               <div class="w-full md:w-1/2">
+    <div class="min-h-[100dvh] h-full flex flex-col after:flex-1">
 
-                    <div class="min-h-[100dvh] h-full flex flex-col after:flex-1">
+        <!-- Header -->
+       <div class="flex-1">
+  <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
 
-                        <!-- Header -->
-                     <div class="flex-1">
-                        <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-                            <!-- Logo con imagen -->
-                            <a class="block" href="{{ route('dashboard') }}">
-                                <img 
-                                    src="{{ asset('images/logoDulceleche.jpeg') }}" 
-                                    alt="Logo Dulce Leche" 
-                                    class="h-12 w-auto object-contain rounded-xl shadow-md"
-                                />
-                            </a>
-                        </div>
-                    </div>
+    @php
+        // Valores seguros (sin reventar si $empresaActual es null)
+        $nombreEmpresa = $empresaActual->nombre ?? config('app.name', 'Mi Empresa');
+        $logoUrl       = $empresaActual->logo_url ?? null;
+
+        // Iniciales seguras (toma hasta 2 palabras)
+        $iniciales = collect(preg_split('/\s+/', trim((string) $nombreEmpresa)))
+            ->filter()
+            ->take(2)
+            ->map(fn ($p) => mb_substr($p, 0, 1))
+            ->join('') ?: ''; // fallback
+    @endphp
+
+    <a href="{{ route('dashboard') }}" class="flex items-center gap-3 group">
+      <!-- Wrapper con efecto glass y sombra -->
+      <div class="relative rounded-2xl p-2 bg-white/60 dark:bg-white/10 backdrop-blur-md shadow-lg
+                  ring-1 ring-black/5 dark:ring-white/5 transition-transform duration-300
+                  group-hover:scale-105">
+        <div class="absolute -inset-1 rounded-3xl bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 -z-10"></div>
+
+        @if ($logoUrl)
+          <!-- Logo -->
+          <img
+            src="{{ $logoUrl }}"
+            alt="{{ $nombreEmpresa }}"
+            class="block h-12 sm:h-14 md:h-16 w-auto object-contain"
+            loading="eager"
+          />
+        @else
+          <!-- Fallback iniciales -->
+          <div class="grid place-items-center h-12 sm:h-14 md:h-16 w-12 sm:w-14 md:w-16 rounded-xl 
+                      bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white font-bold text-lg">
+            {{ $iniciales }}
+          </div>
+        @endif
+      </div>
+    </a>
+
+  </div>
+</div>
 
 
-                        <div class="max-w-sm mx-auto w-full px-4 py-8">
-                            {{ $slot }}
-                        </div>
+        <!-- Contenido dinámico -->
+        <div class="max-w-sm mx-auto w-full px-4 py-8">
+            {{ $slot }}
+        </div>
+    </div>
+</div>
 
-                    </div>
-
-                </div>
 
               
       <div class="hidden md:flex w-1/2 h-screen items-center justify-center bg-gradient-to-br from-purple-100 via-white to-violet-200 dark:from-gray-900 dark:via-gray-800 dark:to-black">
-            <div class="p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl text-center space-y-6 transform transition-all duration-500 hover:scale-[1.02]">
-                <img
-                    src="{{ asset('images/logoDulceleche.jpeg') }}"
-                    alt="Logo Dulce Leche"
-                    class="w-80 max-w-full h-auto object-contain mx-auto rounded-xl"
-                />
-                <h2 class="text-2xl font-extrabold text-gray-800 dark:text-white">Distribuidora de Lácteos</h2>
-                <p class="text-violet-600 dark:text-violet-300 italic text-sm">¡Calidad, frescura y confianza en cada entrega!</p>
+       @php
+    
+    $nombreEmpresa = $empresaActual->nombre ?? '';
+
+  
+    $iniciales = collect(explode(' ', trim($nombreEmpresa)))
+        ->filter()
+        ->take(2)
+        ->map(fn($p) => mb_substr($p, 0, 1))
+        ->join('') ?: 'ME';
+@endphp
+
+<div class="p-10 bg-white/70 dark:bg-gray-800/50 rounded-3xl shadow-2xl text-center 
+            space-y-6 transform transition-all duration-500 hover:scale-[1.03] 
+            relative overflow-hidden">
+
+    <!-- Halo degradado animado detrás -->
+    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 
+                blur-3xl opacity-60 animate-pulse"></div>
+
+    <!-- Logo dinámico con fallback a iniciales (misma lógica que tu header) -->
+    <div class="relative z-10 inline-block p-3 rounded-2xl bg-white/60 dark:bg-gray-900/50 
+                backdrop-blur-lg shadow-lg ring-1 ring-black/5 dark:ring-white/10">
+        @if ($empresaActual?->logo_url)
+            <img
+                src="{{ $empresaActual->logo_url }}"
+                alt="{{ $nombreEmpresa }}"
+                class="w-64 max-w-full h-auto object-contain mx-auto rounded-xl shadow-md"
+                loading="eager"
+            />
+        @else
+            <div class="grid place-items-center w-64 h-40 mx-auto rounded-xl 
+                        bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500
+                        text-white font-extrabold text-5xl tracking-wider">
+                {{ $iniciales }}
             </div>
+        @endif
+    </div>
+
+    <!-- Título y eslogan (también dinámicos si los tienes) -->
+    <div class="relative z-10 space-y-1">
+      <h2 class="text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight">
+  
+</h2>
+
+    </div>
+</div>
+
         </div>
 
             </div>

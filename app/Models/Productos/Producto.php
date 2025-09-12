@@ -20,6 +20,7 @@ class Producto extends Model
         'subcategoria_id',
         'es_articulo_compra',
         'es_articulo_venta',
+        'impuesto_id'
     ];
 
     public function subcategoria()
@@ -38,4 +39,26 @@ class Producto extends Model
     {
         return $this->hasMany(PrecioProducto::class);
     }
+
+public function impuesto()
+{
+    return $this->belongsTo(\App\Models\Impuestos\Impuesto::class, 'impuesto_id');
+}
+public function getPrecioConIvaAttribute(): float
+{
+    $base = (float) $this->precio;
+    $imp  = $this->impuesto;
+
+    if (!$imp) return round($base, 2);
+
+    if ($imp->porcentaje !== null) {
+        return round($base * (1 + ((float)$imp->porcentaje / 100)), 2);
+    }
+
+    if ($imp->monto_fijo !== null) {
+        return round($base + (float)$imp->monto_fijo, 2);
+    }
+
+    return round($base, 2);
+}
 }

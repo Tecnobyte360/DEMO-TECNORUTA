@@ -12,31 +12,36 @@ class SocioNegocios extends Component
 {
     use WithFileUploads;
 
-    public $socioNegocios = [];
-    public $importFile;
-    public $isLoading = false;
-    public $editingSocioId = null;
-
-    // Filtro por cliente
-    public $socioNegocioId = null;
+    /** Catálogo para TomSelect */
     public $clientesFiltrados = [];
 
-    // Modal Pedidos
+    /** Listas separadas */
+    public $clientes = [];
+    public $proveedores = [];
+
+    /** Import */
+    public $importFile;
+    public $isLoading = false;
+
+    /** Filtros compartidos */
+    public $socioNegocioId = null;   // selector puntual (TomSelect)
+    public $buscador = '';           // texto libre (razón social, NIT, dirección)
+
+    /** Modales / pedidos */
     public $socioPedidosId = null;
     public $pedidosSocio = [];
-
-    // Modal Detalle Pedido
     public $mostrarDetalleModal = false;
     public $pedidoSeleccionado = null;
     public $detallesPedido = [];
 
     public function mount()
     {
-        $this->loadClientes();
-        $this->loadSocios();
+        $this->loadClientesSelect();
+        $this->loadListas();
     }
 
-    public function loadClientes()
+    /** === Catálogo TomSelect === */
+    public function loadClientesSelect()
     {
         $this->clientesFiltrados = SocioNegocio::select('id', 'razon_social', 'nit')
             ->orderBy('razon_social')
@@ -44,52 +49,96 @@ class SocioNegocios extends Component
             ->toArray();
     }
 
-  public function loadSocios()
+    /** === Carga dos columnas (clientes y proveedores) con filtros compartidos === */
+   public function loadListas()
 {
-    $this->socioNegocios = SocioNegocio::with([
+    $withRels = [
         'pedidos.pagos',
         'pedidos.detalles.producto',
         'pedidos.usuario',
-        'pedidos.ruta'
-    ])
-    ->when($this->socioNegocioId, function ($query) {
-        $query->where('id', $this->socioNegocioId);
-    })
-    ->get()
-    ->map(function ($socio) {
-        $pedidosSocio = $socio->pedidos
+        'pedidos.ruta',
+    ];
+
+    // Filtros comunes
+    $base = SocioNegocio::with($withRels)
+        ->when($this->socioNegocioId, fn($q) => $q->where('id', $this->socioNegocioId))
+        ->when(trim($this->buscador) !== '', function ($q) {
+            $t = '%'.trim($this->buscador).'%';
+            $q->where(function ($qq) use ($t) {
+                $qq->where('razon_social', 'like', $t)
+                   ->orWhere('nit', 'like', $t)
+                   ->orWhere('direccion', 'like', $t);
+            });
+        })
+        ->orderBy('razon_social')
+        ->get();
+
+    // Calcular saldo pendiente y créditos
+    $enriquecer = function ($s) {
+        $creditos = $s->pedidos
             ->where('tipo_pago', 'credito')
-            ->whereNull('cancelado') // ⬅️ Aquí se filtran los pedidos cancelados
-            ->filter(function ($pedido) {
-                $total = $pedido->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
-                $pagado = $pedido->pagos->sum('monto');
+            ->whereNull('cancelado')
+            ->filter(function ($p) {
+                $total  = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado = $p->pagos->sum('monto');
                 return $total > $pagado;
             })
-            ->map(function ($pedido) {
-                $total = $pedido->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
-                $pagado = $pedido->pagos->sum('monto');
-                $pendiente = $total - $pagado;
-
-                return [
-                    'id'            => $pedido->id,
-                    'total_raw'     => $pendiente,
-                ];
+            ->map(function ($p) {
+                $total  = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado = $p->pagos->sum('monto');
+                return ['id' => $p->id, 'total_raw' => max(0, $total - $pagado)];
             })
             ->values();
 
-        $socio->creditosPendientes = $pedidosSocio;
+        $s->creditosPendientes = $creditos;
+        $s->saldoPendiente     = $creditos->sum('total_raw');
+        return $s;
+    };
 
-        return $socio;
-    })
-    ->values();
+    $base = $base->map($enriquecer);
+
+    // Separar clientes y proveedores según 'C' y 'P'
+    $this->clientes = $base->filter(function ($s) {
+        $tipo = strtoupper(trim($s->tipo ?? ''));
+        return $tipo === 'C';
+    })->values();
+
+    $this->proveedores = $base->filter(function ($s) {
+        $tipo = strtoupper(trim($s->tipo ?? ''));
+        return $tipo === 'P';
+    })->values();
 }
 
 
-    public function updatedSocioNegocioId()
+    /** Calcula saldo pendiente de crédito (no cancelado) y agrega props de apoyo */
+    private function hydrateSaldo($socio)
     {
-        $this->loadSocios();
+        $creditos = $socio->pedidos
+            ->where('tipo_pago', 'credito')
+            ->whereNull('cancelado')
+            ->filter(function ($p) {
+                $total  = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado = $p->pagos->sum('monto');
+                return $total > $pagado;
+            })
+            ->map(function ($p) {
+                $total  = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado = $p->pagos->sum('monto');
+                return ['id' => $p->id, 'total_raw' => max(0, $total - $pagado)];
+            })
+            ->values();
+
+        $socio->creditosPendientes = $creditos;
+        $socio->saldoPendiente     = $creditos->sum('total_raw');
+
+        return $socio;
     }
 
+    /** Re-carga al cambiar filtros */
+    public function updatedSocioNegocioId() { $this->loadListas(); }
+    public function updatedBuscador()       { $this->loadListas(); }
+
+    /** Acciones */
     public function editsocio($id)
     {
         $this->dispatch('loadEditSocio', $id);
@@ -97,28 +146,27 @@ class SocioNegocios extends Component
 
     public function import()
     {
-        $this->validate([
-            'importFile' => 'required|file|mimes:csv,txt',
-        ]);
-
+        $this->validate(['importFile' => 'required|file|mimes:csv,txt']);
         $this->isLoading = true;
-        sleep(2);
+        // ... tu import real
+        sleep(1);
         $this->isLoading = false;
 
-        session()->flash('message', 'Clientes importados correctamente.');
-        $this->loadClientes();
-        $this->loadSocios();
-        $this->importFile = null;
+        session()->flash('message', 'Socios importados correctamente.');
+        $this->loadClientesSelect();
+        $this->loadListas();
+        $this->reset('importFile');
     }
 
     public function cancelar()
     {
         $this->reset(['importFile']);
         $this->resetValidation();
-        session()->forget(['message', 'error', 'errores_importacion']);
+        session()->forget(['message','error','errores_importacion']);
         $this->dispatchBrowserEvent('close-import-modal');
     }
 
+    /** Modal: pedidos del socio */
     public function mostrarPedidos($socioId)
     {
         $this->socioPedidosId = $socioId;
@@ -130,37 +178,33 @@ class SocioNegocios extends Component
             'pedidos.detalles.producto'
         ])->find($socioId);
 
-        if (!$socio) {
-            $this->pedidosSocio = [];
-            return;
-        }
+        if (!$socio) { $this->pedidosSocio = []; return; }
 
         $this->pedidosSocio = $socio->pedidos
             ->where('tipo_pago', 'credito')
-            ->filter(function ($pedido) {
-                $total = $pedido->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
-                $pagado = $pedido->pagos->sum('monto');
-                return $total > $pagado; // Filtra solo si tiene saldo pendiente
+            ->whereNull('cancelado')
+            ->filter(function ($p) {
+                $total  = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado = $p->pagos->sum('monto');
+                return $total > $pagado;
             })
-            ->map(function ($pedido) {
-                $total = $pedido->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
-                $pagado = $pedido->pagos->sum('monto');
-                $pendiente = $total - $pagado;
-
+            ->map(function ($p) {
+                $total    = $p->detalles->sum(fn($d) => $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario));
+                $pagado   = $p->pagos->sum('monto');
+                $pend     = max(0, $total - $pagado);
                 return [
-                    'id'            => $pedido->id,
-                    'numero_pedido' => $pedido->numero_pedido ?: 'N/A',
-                    'fecha'         => $pedido->fecha ? Carbon::parse($pedido->fecha)->format('d/m/Y') : '-',
-                    'ruta'          => $pedido->ruta->ruta ?? 'Sin ruta',
-                    'usuario'       => $pedido->usuario->name ?? 'Desconocido',
-                    'total'         => number_format($pendiente, 2, ',', '.'),
-                    'total_raw'     => $pendiente,
-                    'tipo_pago'     => $pedido->tipo_pago ?? 'N/A',
+                    'id'            => $p->id,
+                    'numero_pedido' => $p->numero_pedido ?: 'N/A',
+                    'fecha'         => $p->fecha ? Carbon::parse($p->fecha)->format('d/m/Y') : '-',
+                    'ruta'          => $p->ruta->ruta ?? 'Sin ruta',
+                    'usuario'       => $p->usuario->name ?? 'Desconocido',
+                    'total'         => number_format($pend, 2, ',', '.'),
+                    'total_raw'     => $pend,
+                    'tipo_pago'     => $p->tipo_pago ?? 'N/A',
                 ];
             })
             ->values()
             ->toArray();
-
 
         $this->dispatch('abrir-modal-pedidos');
     }
@@ -169,51 +213,31 @@ class SocioNegocios extends Component
     {
         $this->socioPedidosId = null;
         $this->pedidosSocio = [];
+        $this->mostrarDetalleModal = false;
+        $this->pedidoSeleccionado = null;
+        $this->detallesPedido = [];
     }
 
+    /** Detalle dentro del modal */
     public function mostrarDetallePedido($pedidoId)
     {
-        // Solo cambiar si es otro pedido
-        if ($this->pedidoSeleccionado && $this->pedidoSeleccionado->id === $pedidoId) {
-            return;
-        }
+        if ($this->pedidoSeleccionado && $this->pedidoSeleccionado->id === $pedidoId) return;
 
         $this->pedidoSeleccionado = Pedido::with(['detalles.producto'])->find($pedidoId);
 
         if ($this->pedidoSeleccionado) {
-            $this->detallesPedido = $this->pedidoSeleccionado->detalles->map(function ($detalle) {
-                $unit = floatval($detalle->precio_aplicado ?? $detalle->precio_unitario ?? 0);
+            $this->detallesPedido = $this->pedidoSeleccionado->detalles->map(function ($d) {
+                $unit = floatval($d->precio_aplicado ?? $d->precio_unitario ?? 0);
                 return [
-                    'producto'        => $detalle->producto->nombre ?? 'Producto desconocido',
-                    'cantidad'        => $detalle->cantidad,
+                    'producto'        => $d->producto->nombre ?? 'Producto desconocido',
+                    'cantidad'        => $d->cantidad,
                     'precio_unitario' => number_format($unit, 2, ',', '.'),
-                    'subtotal'        => number_format($unit * $detalle->cantidad, 2, ',', '.'),
+                    'subtotal'        => number_format($unit * $d->cantidad, 2, ',', '.'),
                 ];
             })->toArray();
 
             $this->mostrarDetalleModal = true;
         }
-    }
-
-
-    public function getSaldoPendienteCreditoAttribute()
-    {
-        return $this->pedidos
-            ->where('tipo_pago', 'credito')
-            ->filter(function ($pedido) {
-                $total = $pedido->detalles->sum(function ($d) {
-                    return $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario);
-                });
-                $pagado = $pedido->pagos->sum('monto');
-                return $total > $pagado;
-            })
-            ->sum(function ($pedido) {
-                $total = $pedido->detalles->sum(function ($d) {
-                    return $d->cantidad * floatval($d->precio_aplicado ?? $d->precio_unitario);
-                });
-                $pagado = $pedido->pagos->sum('monto');
-                return $total - $pagado;
-            });
     }
 
     public function render()

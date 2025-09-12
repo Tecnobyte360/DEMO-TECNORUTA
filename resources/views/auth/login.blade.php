@@ -1,8 +1,10 @@
 <x-authentication-layout>
     <!-- Título -->
-    <h1 class="text-4xl font-extrabold text-gray-800 dark:text-gray-100 mb-6">
-        {{ __('Dulce Leche') }} <span class="text-violet-500">!</span>
-    </h1>
+ <h1 class="text-4xl font-extrabold text-gray-800 dark:text-gray-100 mb-6">
+    {{ $empresaActual?->nombre ?? '' }} <span class="text-violet-500">!</span>
+</h1>
+<link rel="icon" type="image/png" href="{{ $empresaActual?->logo_url ?? asset('favicon.png') }}">
+
 
     <!-- Mensaje de estado -->
     @if (session('status'))

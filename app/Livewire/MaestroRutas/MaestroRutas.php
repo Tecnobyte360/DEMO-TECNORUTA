@@ -10,6 +10,7 @@ use App\Models\Productos\Producto;
 use App\Models\Productos\ProductoBodega;
 use App\Models\bodegas;
 use App\Models\InventarioRuta\InventarioRuta;
+use Illuminate\Support\Facades\DB;
 use Livewire\WithPagination;
 use Masmerise\Toaster\PendingToast;
 use Illuminate\Support\Facades\Log;
@@ -42,17 +43,35 @@ class MaestroRutas extends Component
 
     public function mount()
     {
-        $this->vehiculos = Vehiculo::where('estado', 'activo')->get();
-
+        $this->vehiculos   = Vehiculo::where('estado', 'activo')->get();
         $this->conductores = User::all();
-        $this->productos = Producto::all();
-        $this->bodegas = bodegas::all();
+        $this->productos   = Producto::all();
+        $this->bodegas     = bodegas::all();
+        $this->setDefaultBodegaIfEmpty();
+
         $this->cargarRutas();
     }
+
 
     public function cargarRutas()
     {
         $this->rutas = Ruta::with(['vehiculo', 'conductores'])->latest()->get();
+    }
+
+
+    private function getDefaultBodegaId(): ?int
+    {
+
+        $default = $this->bodegas->first();
+
+        return $default?->id;
+    }
+
+    private function setDefaultBodegaIfEmpty(): void
+    {
+        if (empty($this->bodega_id)) {
+            $this->bodega_id = $this->getDefaultBodegaId();
+        }
     }
 
     public function guardarRuta()
@@ -141,111 +160,175 @@ class MaestroRutas extends Component
     }
 
 
-    public function actualizarRuta()
-    {
-        try {
-            $this->validate([
-                'vehiculo_id' => 'required|exists:vehiculos,id',
-                'ruta' => 'required|string|max:255',
-                'fecha_salida' => 'required|date',
-                'conductor_ids' => 'required|array|min:1',
-            ]);
+   public function actualizarRuta()
+{
+    try {
+        $this->validate([
+            'vehiculo_id'    => 'required|exists:vehiculos,id',
+            'ruta'           => 'required|string|max:255',
+            'fecha_salida'   => 'required|date',
+            'conductor_ids'  => 'required|array|min:1',
+        ]);
 
-            $ruta = Ruta::with(['inventarios', 'conductores'])->findOrFail($this->ruta_id);
+        $ruta = Ruta::with(['inventarios.producto', 'inventarios.bodega', 'conductores'])
+            ->findOrFail($this->ruta_id);
 
-            $hayCambiosEnRuta =
-                $ruta->vehiculo_id != $this->vehiculo_id ||
-                $ruta->ruta != $this->ruta ||
-                $ruta->fecha_salida != $this->fecha_salida ||
-                !$ruta->conductores->pluck('id')->diff($this->conductor_ids)->isEmpty();
+        $hayCambiosEnRuta =
+            $ruta->vehiculo_id != $this->vehiculo_id ||
+            $ruta->ruta != $this->ruta ||
+            $ruta->fecha_salida != $this->fecha_salida ||
+            !$ruta->conductores->pluck('id')->diff($this->conductor_ids)->isEmpty();
 
-            $inventariosOriginales = $ruta->inventarios->map(function ($item) {
+        // Normaliza "nuevas" asignaciones (lo que el usuario quiere como cantidad_inicial)
+        $nuevas = collect($this->asignaciones)
+            ->map(function ($i) {
                 return [
-                    'producto_id' => $item->producto_id,
-                    'bodega_id' => $item->bodega_id,
-                    'cantidad' => $item->cantidad,
-                    'cantidad_inicial' => $item['cantidad'],
+                    'producto_id' => (int) $i['producto_id'],
+                    'bodega_id'   => (int) $i['bodega_id'],
+                    'cantidad'    => (int) $i['cantidad'], // <- interpretado como nueva cantidad_inicial deseada
                 ];
-            })->toArray();
+            })
+            ->keyBy(fn ($i) => "{$i['producto_id']}|{$i['bodega_id']}");
 
-            $asignacionesActuales = collect($this->asignaciones)->map(function ($item) {
-                return [
-                    'producto_id' => $item['producto_id'],
-                    'bodega_id' => $item['bodega_id'],
-                    'cantidad' => $item['cantidad'],
-                ];
-            })->toArray();
+        // Inventarios actuales (en BD)
+        $originales = $ruta->inventarios->keyBy(fn ($i) => "{$i->producto_id}|{$i->bodega_id}");
 
-            $hayCambiosEnAsignaciones = $inventariosOriginales !== $asignacionesActuales;
-
-            if (!$hayCambiosEnRuta && !$hayCambiosEnAsignaciones) {
-                PendingToast::create()
-                    ->info()
-                    ->message('No se detectaron cambios para actualizar.')
-                    ->duration(4000);
-                return;
+        // Detecta cambios en asignaciones (comparando cantidad_inicial actual vs nueva deseada)
+        $hayCambiosEnAsignaciones = false;
+        if ($originales->count() !== $nuevas->count()) {
+            $hayCambiosEnAsignaciones = true;
+        } else {
+            foreach ($nuevas as $k => $nuevo) {
+                if (!$originales->has($k)) { $hayCambiosEnAsignaciones = true; break; }
+                $inv = $originales[$k];
+                if ((int)$inv->cantidad_inicial !== (int)$nuevo['cantidad']) { $hayCambiosEnAsignaciones = true; break; }
             }
+        }
 
-            // Revertir stock anterior
-            foreach ($ruta->inventarios as $inventario) {
-                $pb = ProductoBodega::where('producto_id', $inventario->producto_id)
-                    ->where('bodega_id', $inventario->bodega_id)
-                    ->first();
+        if (!$hayCambiosEnRuta && !$hayCambiosEnAsignaciones) {
+            PendingToast::create()->info()->message('No se detectaron cambios para actualizar.')->duration(4000);
+            return;
+        }
 
-                if ($pb) {
-                    $pb->increment('stock', $inventario->cantidad);
-                }
-
-                $inventario->delete();
-            }
-
-            // Actualizar ruta
+        DB::transaction(function () use ($ruta, $nuevas, $originales) {
+            // 1) Actualizar cabecera y conductores
             $ruta->update([
-                'vehiculo_id' => $this->vehiculo_id,
-                'ruta' => $this->ruta,
+                'vehiculo_id'  => $this->vehiculo_id,
+                'ruta'         => $this->ruta,
                 'fecha_salida' => $this->fecha_salida,
             ]);
             $ruta->conductores()->sync($this->conductor_ids);
 
-            // Asignaciones nuevas
-            foreach ($this->asignaciones as $item) {
-                InventarioRuta::create([
-                    'ruta_id' => $ruta->id,
-                    'producto_id' => $item['producto_id'],
-                    'bodega_id' => $item['bodega_id'],
-                    'cantidad' => $item['cantidad'],
-                    'cantidad_inicial' => $item['cantidad'],
-                ]);
+            // 2) Procesar altas/bajas y nuevos items por (producto,bodega)
+            foreach ($nuevas as $key => $nuevo) {
+                $prodId   = $nuevo['producto_id'];
+                $bodId    = $nuevo['bodega_id'];
+                $newQtyIn = $nuevo['cantidad']; // nueva cantidad_inicial deseada
 
-                $pb = ProductoBodega::where('producto_id', $item['producto_id'])
-                    ->where('bodega_id', $item['bodega_id'])
-                    ->first();
+                if ($originales->has($key)) {
+                    // Ya existe -> calcular delta vs cantidad_inicial actual
+                    /** @var \App\Models\InventarioRuta\InventarioRuta $inv */
+                    $inv       = $originales[$key];
+                    $origQtyIn = (int) $inv->cantidad_inicial;
 
-                if ($pb && $pb->stock >= $item['cantidad']) {
-                    $pb->decrement('stock', $item['cantidad']);
+                    if ($newQtyIn > $origQtyIn) {
+                        // AUMENTO: enviar delta adicional a la ruta
+                        $delta = $newQtyIn - $origQtyIn;
+
+                        $pb = ProductoBodega::where('producto_id', $prodId)
+                            ->where('bodega_id', $bodId)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$pb || $pb->stock < $delta) {
+                            throw new \Exception("Stock insuficiente para aumentar {$delta} uds de {$inv->producto->nombre} en {$inv->bodega->nombre}.");
+                        }
+
+                        $pb->decrement('stock', $delta);
+                        // Sube inicial y disponible en la ruta
+                        $inv->cantidad_inicial += $delta;
+                        $inv->cantidad         += $delta;
+                        $inv->save();
+
+                    } elseif ($newQtyIn < $origQtyIn) {
+                        // DISMINUCIÓN: devolver delta desde la ruta a la bodega
+                        $delta = $origQtyIn - $newQtyIn;
+
+                        if ($inv->cantidad < $delta) {
+                            throw new \Exception("No puedes reducir más de lo que queda en ruta. Restante: {$inv->cantidad}, intento: {$delta}.");
+                        }
+
+                        $inv->cantidad_inicial -= $delta;
+                        $inv->cantidad         -= $delta;
+                        $inv->save();
+
+                        $pb = ProductoBodega::where('producto_id', $prodId)
+                            ->where('bodega_id', $bodId)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($pb) { $pb->increment('stock', $delta); }
+                    }
+
+                    // Ya procesado; eliminar de $originales para luego identificar removidos
+                    $originales->forget($key);
+
+                } else {
+                    // NUEVO item: crear y descontar stock total solicitado
+                    $pb = ProductoBodega::where('producto_id', $prodId)
+                        ->where('bodega_id', $bodId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$pb || $pb->stock < $newQtyIn) {
+                        throw new \Exception("Stock insuficiente para asignar {$newQtyIn} uds.");
+                    }
+
+                    InventarioRuta::create([
+                        'ruta_id'          => $ruta->id,
+                        'producto_id'      => $prodId,
+                        'bodega_id'        => $bodId,
+                        'cantidad'         => $newQtyIn, // disponible en la ruta
+                        'cantidad_inicial' => $newQtyIn, // acumulado asignado
+                    ]);
+
+                    $pb->decrement('stock', $newQtyIn);
                 }
             }
 
-            $this->resetFormulario();
-            $this->cargarRutas();
+            // 3) Ítems que estaban y ya no están -> devolver lo restante y eliminar
+            foreach ($originales as $inv) {
+                if ($inv->cantidad > 0) {
+                    $pb = ProductoBodega::where('producto_id', $inv->producto_id)
+                        ->where('bodega_id', $inv->bodega_id)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($pb) { $pb->increment('stock', $inv->cantidad); }
+                }
+                $inv->delete();
+            }
+        });
 
-            PendingToast::create()
-                ->success()
-                ->message('Ruta actualizada correctamente.')
-                ->duration(5000);
-        } catch (\Throwable $e) {
-            Log::error('Error al actualizar la ruta', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        $this->resetFormulario();
+        $this->cargarRutas();
 
-            PendingToast::create()
-                ->error()
-                ->message('Error al actualizar la ruta: ' . $e->getMessage())
-                ->duration(9000);
-        }
+        PendingToast::create()
+            ->success()
+            ->message('Ruta actualizada correctamente.')
+            ->duration(5000);
+
+    } catch (\Throwable $e) {
+        Log::error('Error al actualizar la ruta', [
+            'message' => $e->getMessage(),
+            'trace'   => $e->getTraceAsString(),
+        ]);
+
+        PendingToast::create()
+            ->error()
+            ->message('Error al actualizar la ruta: ' . $e->getMessage())
+            ->duration(9000);
     }
-
+}
 
     public function updatedProductoId()
     {
@@ -358,7 +441,7 @@ class MaestroRutas extends Component
                 ];
             }
 
-            $this->reset(['producto_id', 'bodega_id', 'cantidad_asignada', 'stockDisponible']);
+            $this->reset(['producto_id', 'cantidad_asignada', 'stockDisponible']);
 
             PendingToast::create()
                 ->success()
@@ -428,7 +511,7 @@ class MaestroRutas extends Component
                     'producto_nombre' => $inv->producto->nombre ?? 'N/A',
                     'bodega_id' => $inv->bodega_id,
                     'bodega_nombre' => $inv->bodega->nombre ?? 'N/A',
-                    'cantidad' => $inv->cantidad,
+                  'cantidad' => $inv->cantidad_inicial,
                 ];
             })->toArray();
 

@@ -15,17 +15,30 @@
                    {{ $tab === 'pedidos_mes' ? 'border-b-2 border-violet-600 text-violet-600 dark:text-violet-400' : 'text-gray-600 dark:text-gray-400 hover:text-violet-500' }}">
             Liquidación conductores
         </button>
-    </nav>
+       <button
+  wire:click="$set('tab', 'reportes')"
+  class="py-2 px-4 text-sm font-semibold transition-all duration-200 
+    {{ $tab === 'reportes' ? 'border-b-2 border-violet-600 text-violet-600 dark:text-violet-400' : 'text-gray-600 dark:text-gray-400 hover:text-violet-500' }}">
+  Reportes
+</button>
 
-    <!-- Contenido de pestañas -->
-    @if ($tab === 'creditos')
-        <div class="space-y-4">
-            @livewire('finanzas.creditos')
-        </div>
-    @elseif ($tab === 'pedidos_mes')
-        <div class="space-y-4">
-            @livewire('finanzas.liquidacion')
-        </div>
-    @endif
+    </nav>
+<!-- Contenido de pestañas -->
+@if ($tab === 'creditos')
+  <div class="space-y-4">
+    @livewire('finanzas.creditos')
+  </div>
+
+@elseif ($tab === 'pedidos_mes')
+  <div class="space-y-4">
+    @livewire('finanzas.liquidacion')
+  </div>
+
+@elseif ($tab === 'reportes')
+  <div class="space-y-4">
+    @livewire('finanzas.reportes')
+  </div>
+@endif
+
 
 </div>

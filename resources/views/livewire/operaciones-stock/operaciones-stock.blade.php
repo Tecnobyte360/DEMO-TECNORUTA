@@ -3,13 +3,7 @@
     {{-- Navegación de pestañas --}}
     <div>
         <nav class="flex space-x-6 border-b-2 border-gray-200 dark:border-gray-700">
-            <button
-                wire:click="$set('tab', 'entradas')"
-                class="py-2 px-4 text-sm font-bold focus:outline-none {{ $tab === 'entradas' ? 'border-b-4 border-violet-600 text-violet-600' : 'text-gray-600 dark:text-gray-400 hover:text-violet-600' }}"
-            >
-                ➡️ Entradas Mercancía
-            </button>
-
+          
             
         </nav>
     </div>

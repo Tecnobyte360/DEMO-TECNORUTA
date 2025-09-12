@@ -51,5 +51,11 @@ class Ruta extends Model
     {
         return $this->hasMany(Pedido::class);
     }
-    
+    public function getNombreAttribute()
+{
+    return $this->attributes['nombre']
+        ?? ($this->attributes['nombre_ruta'] ?? null)
+        ?? ($this->attributes['descripcion'] ?? null);
+}
+
 }

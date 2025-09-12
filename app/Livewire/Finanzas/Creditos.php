@@ -7,7 +7,7 @@ use Livewire\WithPagination;
 use App\Models\Pedidos\Pedido;
 use App\Models\Pago;
 use App\Models\InventarioRuta\GastoRuta;
-use App\Models\Devoluciones\DevolucionDetalle;
+use App\Models\User; // lista para el filtro de conductor
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -24,11 +24,17 @@ class Creditos extends Component
     public $pedidoSeleccionado;
     public $montoPago = '';
     public $showPagoModal = false;
+
     public $estadoFiltro = 'todos';
     public $tipoPagoFiltro = 'todos';
     public $fechaInicio;
     public $fechaFin;
     public $filtroCliente = '';
+
+    // NUEVO: filtro por conductor (usa user_id en la tabla pedidos)
+    public $conductorFiltro = 'todos';
+    public $conductores = [];
+
     public $gastosAgrupados = [];
     public $totalOrdenes = 0;
     public $totalContado = 0;
@@ -38,6 +44,7 @@ class Creditos extends Component
     public $totalGastos = 0;
     public $gastosAdministrativos = 0;
     public $totalesPorTipoGasto = [];
+
     public $mostrarDetalle = false;
     public $pedidoDetalleSeleccionado;
     public $pedidosFiltrados = [];
@@ -49,12 +56,22 @@ class Creditos extends Component
         $this->fechaInicio = null;
         $this->fechaFin = null;
         $this->filtroAplicado = false;
+
+        // Carga de conductores (si manejas roles, filtra por rol aquí)
+        $this->conductores = User::select('id', 'name')->orderBy('name')->get();
     }
 
     public function updated($property)
     {
-        if (in_array($property, ['estadoFiltro', 'fechaInicio', 'fechaFin', 'tipoPagoFiltro', 'filtroCliente'])) {
-            $this->resetPage(); // Solo resetea la página, no recarga los pedidos aún
+        if (in_array($property, [
+            'estadoFiltro',
+            'fechaInicio',
+            'fechaFin',
+            'tipoPagoFiltro',
+            'filtroCliente',
+            'conductorFiltro',
+        ])) {
+            $this->resetPage(); // sólo resetea la página; la carga se hace al dar "Buscar"
         }
     }
 
@@ -68,9 +85,12 @@ class Creditos extends Component
             'filtroCliente',
             'filtroAplicado',
             'pedidosFiltrados',
+            'conductorFiltro',
         ]);
+
         $this->estadoFiltro = 'todos';
         $this->tipoPagoFiltro = 'todos';
+        $this->conductorFiltro = 'todos';
         $this->resetPage();
     }
 
@@ -83,22 +103,30 @@ class Creditos extends Component
             'pagos',
             'detalles.producto',
             'detalles.precioLista',
-            'conductor',
+            'conductor', // relación que usa user_id
             'ruta',
         ])->where('estado', '!=', 'cancelado');
 
+        // Tipo de pago
         if ($this->tipoPagoFiltro !== 'todos') {
             $query->where('tipo_pago', $this->tipoPagoFiltro);
         } else {
             $query->whereIn('tipo_pago', ['credito', 'contado', 'transferencia']);
         }
 
+        // Rango de fechas
         if ($this->fechaInicio && $this->fechaFin) {
             $query->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin]);
         }
 
+        // Filtro por conductor (usa user_id)
+        if ($this->conductorFiltro !== 'todos') {
+            $query->where('user_id', (int) $this->conductorFiltro);
+        }
+
         $todosLosPedidos = $query->orderByDesc('fecha')->get();
 
+        // Filtro por cliente (texto)
         if (!empty($this->filtroCliente)) {
             $todosLosPedidos = $todosLosPedidos->filter(function ($pedido) {
                 return str_contains(
@@ -114,6 +142,7 @@ class Creditos extends Component
             ->where('tipo_pago', 'credito')
             ->sum(fn($pedido) => $pedido->detalles->sum(fn($d) => $d->cantidad * ($d->producto->precio ?? 0)));
 
+        // Gastos
         $this->gastosAgrupados = collect();
         $this->totalGastos = 0;
         $this->gastosAdministrativos = 0;
@@ -129,6 +158,7 @@ class Creditos extends Component
             $this->gastosAdministrativos = $gastosFiltrados->whereNull('ruta_id')->sum('monto');
         }
 
+        // Filtrar por estado final (pendiente, parcial, pagado)
         $this->totalFacturado = 0;
 
         $this->pedidosFiltrados = $todosLosPedidos->filter(function ($pedido) {
@@ -144,9 +174,9 @@ class Creditos extends Component
 
             $estado = match (true) {
                 $pedido->tipo_pago === 'contado' => 'pagado',
-                $totalPagado == 0 => 'pendiente',
-                $totalPagado < $totalPedido => 'parcial',
-                default => 'pagado',
+                $totalPagado == 0                => 'pendiente',
+                $totalPagado < $totalPedido      => 'parcial',
+                default                          => 'pagado',
             };
 
             if ($estado === 'pagado') {
@@ -229,43 +259,53 @@ class Creditos extends Component
 
     public function verDetalle($id)
     {
-        $this->pedidoDetalleSeleccionado = Pedido::with(['detalles.producto', 'socioNegocio', 'ruta', 'conductor'])->findOrFail($id);
+        $this->pedidoDetalleSeleccionado = Pedido::with([
+            'detalles.producto',
+            'socioNegocio',
+            'ruta',
+            'conductor'
+        ])->findOrFail($id);
+
         $this->mostrarDetalle = true;
     }
 
-   public function render()
-{
-    // ⚠️ Asegura que los datos estén presentes cuando se navega con la paginación
-    if ($this->filtroAplicado && empty($this->pedidosFiltrados)) {
-        $this->cargarPedidosCredito();
+    public function render()
+    {
+        // Asegura datos al paginar
+        if ($this->filtroAplicado && empty($this->pedidosFiltrados)) {
+            $this->cargarPedidosCredito();
+        }
+
+        if (!$this->filtroAplicado) {
+            $pedidosCredito = new LengthAwarePaginator([], 0, 10);
+            return view('livewire.finanzas.creditos', [
+                'pedidosCredito' => $pedidosCredito,
+                'conductores'    => $this->conductores,
+            ]);
+        }
+
+        $items = collect($this->pedidosFiltrados ?? []);
+        $perPage = 10;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $totalPages = (int) ceil($items->count() / $perPage);
+
+        if ($currentPage > $totalPages && $totalPages > 0) {
+            $currentPage = 1;
+        }
+
+        $currentItems = $items->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $pedidosCredito = new LengthAwarePaginator(
+            $currentItems,
+            $items->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('livewire.finanzas.creditos', [
+            'pedidosCredito' => $pedidosCredito,
+            'conductores'    => $this->conductores,
+        ]);
     }
-
-    if (!$this->filtroAplicado) {
-        $pedidosCredito = new LengthAwarePaginator([], 0, 10);
-        return view('livewire.finanzas.creditos', compact('pedidosCredito'));
-    }
-
-    $items = collect($this->pedidosFiltrados ?? []);
-    $perPage = 10;
-    $currentPage = LengthAwarePaginator::resolveCurrentPage();
-    $totalPages = (int) ceil($items->count() / $perPage);
-
-    if ($currentPage > $totalPages && $totalPages > 0) {
-        $currentPage = 1;
-    }
-
-    $currentItems = $items->slice(($currentPage - 1) * $perPage, $perPage)->values();
-
-    $pedidosCredito = new LengthAwarePaginator(
-        $currentItems,
-        $items->count(),
-        $perPage,
-        $currentPage,
-        ['path' => request()->url(), 'query' => request()->query()]
-    );
-
-    return view('livewire.finanzas.creditos', compact('pedidosCredito'));
-}
-
-
 }
