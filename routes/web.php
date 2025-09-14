@@ -211,7 +211,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
 
 
-    Route::get('/' . config('app.name') . '/Usuarios', Usuarios::class)->name('Usuarios');
+    Route::get('/Usuarios', Usuarios::class)->name('Usuarios');
     Route::middleware(['auth'])->group(function () {
 
         Route::get('/roles', IndexP::class)->name('roles.index');
@@ -220,8 +220,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/roles/editar/{id}', RolesEdit::class)->name('roles.edit');
     });
 
-    Route::get('/' . config('app.name') . '/Bodegas', Bodega::class)->name('Bodegas');
-    Route::get('/' . config('app.name') . '/SociosNegocio', SocioNegocios::class)->name('SociosNegocio');
+    Route::get('/Bodegas', Bodega::class)->name('Bodegas');
+    Route::get('/SociosNegocio', SocioNegocios::class)->name('SociosNegocio');
     Route::get('/socio-negocio/{id}/edit', \App\Livewire\SocioNegocio\Edit::class)->name('socio-negocio.edit');
     Route::get('/productos', Productos::class)->name('productos.index');
     Route::get('/categorias', Categorias::class)->name('categorias.index');
