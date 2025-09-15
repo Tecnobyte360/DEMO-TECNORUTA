@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     // cambia a '[facturas]' si estás en dbo, o a '[dbo].[facturas]'
-    private string $table = '[admin].[facturas]';
+    private string $table = 'facturas';
 
     public function up(): void
     {
