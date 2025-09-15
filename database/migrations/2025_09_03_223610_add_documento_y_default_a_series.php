@@ -6,73 +6,43 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-
     public function up(): void
     {
-        // Añade columnas solo si faltan (evita 1060 "duplicate column")
-        Schema::table('series', function (Blueprint $table) {
-            if (!Schema::hasColumn('series', 'documento')) {
-                $table->string('documento', 40)->default('factura')->after('prefijo');
-            }
-            if (!Schema::hasColumn('series', 'es_default')) {
-                $table->boolean('es_default')->default(false)->after('documento');
-            }
-        });
-
-        $driver = DB::getDriverName();
-
-        if ($driver === 'sqlsrv') {
-            // Índice filtrado nativo en SQL Server
-            DB::statement("
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.indexes WHERE name = 'IX_series_default_por_documento'
-                    AND object_id = OBJECT_ID('series')
-                )
-                CREATE UNIQUE INDEX IX_series_default_por_documento
-                ON [series] ([documento]) WHERE [es_default] = 1;
-            ");
-        } elseif ($driver === 'mysql') {
-            // MySQL 8: índice ÚNICO FUNCIONAL (emula WHERE es_default=1)
-            $exists = collect(DB::select("
-                SHOW INDEX FROM `series` WHERE Key_name = 'ix_series_default_por_documento'
-            "))->isNotEmpty();
-
-            if (!$exists) {
-                DB::statement("
-                    CREATE UNIQUE INDEX `ix_series_default_por_documento`
-                    ON `series` ((CASE WHEN `es_default` = 1 THEN `documento` ELSE NULL END))
-                ");
-            }
+        if (Schema::hasTable('series')) {
+            Schema::table('series', function (Blueprint $table) {
+                if (!Schema::hasColumn('series', 'documento')) {
+                    $table->string('documento', 40)->default('factura')->after('prefijo');
+                }
+                if (!Schema::hasColumn('series', 'es_default')) {
+                    $table->boolean('es_default')->default(false)->after('documento');
+                }
+            });
         }
+
+        // Elimina índice único previo si existía
+        $exists = DB::selectOne("
+            SELECT 1
+            FROM INFORMATION_SCHEMA.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME   = 'series'
+              AND INDEX_NAME   = 'IX_series_default_por_documento'
+            LIMIT 1
+        ");
+
+        if ($exists) {
+            DB::statement("ALTER TABLE `series` DROP INDEX `IX_series_default_por_documento`");
+        }
+
+        // Crea índice único en MySQL (sin filtro)
+        DB::statement("ALTER TABLE `series` ADD UNIQUE `IX_series_default_por_documento` (`documento`, `es_default`)");
     }
 
     public function down(): void
     {
-        $driver = DB::getDriverName();
-
-        if ($driver === 'sqlsrv') {
-            // Quita el índice filtrado
-            DB::statement("
-                IF EXISTS (
-                    SELECT 1 FROM sys.indexes WHERE name = 'IX_series_default_por_documento'
-                    AND object_id = OBJECT_ID('series')
-                )
-                DROP INDEX IX_series_default_por_documento ON [series];
-            ");
-        } elseif ($driver === 'mysql') {
-            try {
-                DB::statement("DROP INDEX `ix_series_default_por_documento` ON `series`");
-            } catch (\Throwable $e) { /* ya no existe, ignorar */ }
+        try {
+            DB::statement("ALTER TABLE `series` DROP INDEX `IX_series_default_por_documento`");
+        } catch (\Throwable $e) {
+            // ignorar si no existe
         }
-
-        // Elimina columnas si existen
-        Schema::table('series', function (Blueprint $table) {
-            if (Schema::hasColumn('series', 'es_default')) {
-                $table->dropColumn('es_default');
-            }
-            if (Schema::hasColumn('series', 'documento')) {
-                $table->dropColumn('documento');
-            }
-        });
     }
 };
