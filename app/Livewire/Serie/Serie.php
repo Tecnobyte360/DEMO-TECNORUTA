@@ -8,6 +8,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Masmerise\Toaster\PendingToast;
 use App\Models\Serie\Serie as SerieModel;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class Serie extends Component
 {
@@ -35,31 +36,33 @@ class Serie extends Component
 
     public bool $showModal = false;
 
-    protected $queryString = ['search','perPage'];
+    protected $queryString = ['search', 'perPage'];
 
     // -------- Reglas de validación base (de formulario)
     protected function rules(): array
     {
         return [
-            'documento'   => ['required','in:factura,oferta,pedido,nota_credito,otro'],
+            'documento'   => ['required', 'in:factura,oferta,pedido,nota_credito,otro'],
             'es_default'  => ['boolean'],
 
-            'nombre'  => ['required','string','max:120'],
+            'nombre'  => ['required', 'string', 'max:120'],
             'prefijo' => [
-                'nullable','string','max:10',
-                Rule::unique('series','prefijo')
-                    ->where(fn($q) => $q->where('nombre',$this->nombre))
+                'nullable',
+                'string',
+                'max:10',
+                Rule::unique('series', 'prefijo')
+                    ->where(fn($q) => $q->where('nombre', $this->nombre))
                     ->ignore($this->serie_id)
             ],
 
-            'rango_desde'  => ['required','integer','min:1'],
-            'rango_hasta'  => ['required','integer','gte:rango_desde'],
-            'proximo_ui'   => ['required','integer','min:1'],
-            'longitud'     => ['required','integer','min:1','max:12'],
+            'rango_desde'  => ['required', 'integer', 'min:1'],
+            'rango_hasta'  => ['required', 'integer', 'gte:rango_desde'],
+            'proximo_ui'   => ['required', 'integer', 'min:1'],
+            'longitud'     => ['required', 'integer', 'min:1', 'max:12'],
 
-            'resolucion'   => ['nullable','string','max:120'],
-            'fecha_inicio' => ['nullable','date'],
-            'fecha_fin'    => ['nullable','date','after_or_equal:fecha_inicio'],
+            'resolucion'   => ['nullable', 'string', 'max:120'],
+            'fecha_inicio' => ['nullable', 'date'],
+            'fecha_fin'    => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
 
             'activo'       => ['boolean'],
         ];
@@ -71,11 +74,11 @@ class Serie extends Component
         try {
             $items = SerieModel::query()
                 ->when(trim($this->search) !== '', function ($q) {
-                    $s = '%'.trim($this->search).'%';
-                    $q->where('nombre','like',$s)
-                      ->orWhere('prefijo','like',$s)
-                      ->orWhere('resolucion','like',$s)
-                      ->orWhere('documento','like',$s);
+                    $s = '%' . trim($this->search) . '%';
+                    $q->where('nombre', 'like', $s)
+                        ->orWhere('prefijo', 'like', $s)
+                        ->orWhere('resolucion', 'like', $s)
+                        ->orWhere('documento', 'like', $s);
                 })
                 ->orderByDesc('id')
                 ->paginate($this->perPage);
@@ -84,8 +87,19 @@ class Serie extends Component
         } catch (\Throwable $e) {
             report($e);
             PendingToast::create()->error()->message('No se pudo cargar el listado de series.')->duration(6000);
-            // Fallback vacío para no romper la vista
-            $items = collect([])->paginate(10);
+
+            // ✅ Paginador vacío para no romper la vista
+            $items = new LengthAwarePaginator(
+                collect([]),                 // items
+                0,                           // total
+                $this->perPage,              // per page
+                request()->integer('page', 1),
+                [
+                    'path'  => request()->url(),
+                    'query' => request()->query(),
+                ]
+            );
+
             return view('livewire.serie.serie', compact('items'));
         }
     }
@@ -161,7 +175,7 @@ class Serie extends Component
                 // Un solo default por documento: desmarca otros si corresponde
                 if ($this->es_default) {
                     SerieModel::where('documento', $this->documento)
-                        ->when($this->serie_id, fn($q) => $q->where('id','<>',$this->serie_id))
+                        ->when($this->serie_id, fn($q) => $q->where('id', '<>', $this->serie_id))
                         ->update(['es_default' => false]);
                 }
 
@@ -238,7 +252,7 @@ class Serie extends Component
             $m = SerieModel::findOrFail($id);
 
             // Protección: no eliminar si tiene facturas asociadas
-            $tieneDocs = \App\Models\Factura\factura::where('serie_id',$id)->exists();
+            $tieneDocs = \App\Models\Factura\factura::where('serie_id', $id)->exists();
             if ($tieneDocs) {
                 PendingToast::create()->warning()->message('No puedes eliminar una serie con documentos emitidos.')->duration(7000);
                 return;
@@ -263,14 +277,14 @@ class Serie extends Component
                 if (!$s) return '';
                 $n = max((int)$s->proximo, (int)$s->desde);
                 $num = str_pad((string)$n, $long, '0', STR_PAD_LEFT);
-                return ($s->prefijo ? "{$s->prefijo}-" : '').$num;
+                return ($s->prefijo ? "{$s->prefijo}-" : '') . $num;
             }
 
             $n = max((int)$this->proximo_ui ?: $this->rango_desde, $this->rango_desde);
             $n = min($n, (int)$this->rango_hasta);
             $num = str_pad((string)$n, $long, '0', STR_PAD_LEFT);
 
-            return ($this->prefijo ? "{$this->prefijo}-" : '').$num;
+            return ($this->prefijo ? "{$this->prefijo}-" : '') . $num;
         } catch (\Throwable $e) {
             report($e);
             return '';
@@ -312,7 +326,7 @@ class Serie extends Component
             $maxUsado = \App\Models\Factura\factura::where('serie_id', $this->serie_id)->max('numero');
             if ($maxUsado && (int)$this->rango_hasta < (int)$maxUsado) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'rango_hasta' => 'El valor "Hasta" no puede ser menor que el último número emitido ('.$maxUsado.').',
+                    'rango_hasta' => 'El valor "Hasta" no puede ser menor que el último número emitido (' . $maxUsado . ').',
                 ]);
             }
         }
