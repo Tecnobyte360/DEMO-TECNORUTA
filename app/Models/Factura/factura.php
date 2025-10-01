@@ -2,24 +2,42 @@
 
 namespace App\Models\Factura;
 
+use App\Models\MediosPago\MedioPagos;
 use App\Models\Serie\Serie;
 use App\Models\SocioNegocio\SocioNegocio;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
-class factura extends Model
+class Factura extends Model
 {
     protected $table = 'facturas';
 
     protected $fillable = [
-        'serie_id','numero','prefijo',
-        'socio_negocio_id','cotizacion_id','pedido_id',
-        'fecha','vencimiento','moneda',
-        'tipo_pago','plazo_dias',
-        'subtotal','impuestos','total','pagado','saldo',
-        'estado','terminos_pago','notas','pdf_path',
+        'serie_id',
+        'numero',
+        'prefijo',
+        'socio_negocio_id',
+        'cotizacion_id',
+        'pedido_id',
+        'fecha',
+        'vencimiento',
+        'moneda',
+        'tipo_pago',
+        'plazo_dias',
+        'subtotal',
+        'impuestos',
+        'total',
+        'pagado',
+        'saldo',
+        'estado',
+        'terminos_pago',
+        'notas',
+        'pdf_path',
+        'cuenta_cobro_id',
+        'condicion_pago_id'
     ];
 
     protected $casts = [
@@ -31,6 +49,24 @@ class factura extends Model
         'pagado'      => 'decimal:2',
         'saldo'       => 'decimal:2',
     ];
+
+    /* ----------------- Hooks: asegura prefijo ----------------- */
+    protected static function booted(): void
+    {
+        // Al crear: si hay serie y prefijo nulo, tómalo de la serie
+        static::creating(function (self $f) {
+            if (empty($f->prefijo) && !empty($f->serie_id)) {
+                $f->prefijo = Serie::whereKey($f->serie_id)->value('prefijo');
+            }
+        });
+
+        // Al actualizar serie en un registro existente sin prefijo, repónlo
+        static::updating(function (self $f) {
+            if ($f->isDirty('serie_id') && empty($f->prefijo) && !empty($f->serie_id)) {
+                $f->prefijo = Serie::whereKey($f->serie_id)->value('prefijo');
+            }
+        });
+    }
 
     /* ----------------- Relaciones ----------------- */
 
@@ -54,7 +90,7 @@ class factura extends Model
         return $this->hasMany(FacturaPago::class, 'factura_id');
     }
 
-    /* --------------- Helpers de estado/pago --------------- */
+    /* --------------- Helpers de pago/fechas --------------- */
 
     public function setContado(): self
     {
@@ -80,7 +116,7 @@ class factura extends Model
             && now()->toDateString() > $this->vencimiento->toDateString();
     }
 
-    /** Número formateado con prefijo/longitud de la serie (si está disponible). */
+    /** Número formateado con prefijo y longitud de la serie. */
     public function getNumeroFormateadoAttribute(): ?string
     {
         if (!$this->numero) return null;
@@ -91,16 +127,15 @@ class factura extends Model
 
     /* --------------- Operaciones de negocio --------------- */
 
-    /** Agrega una línea y recalcula totales. $data coincide con fillable de FacturaDetalle. */
+    /** Agrega una línea y recalcula totales. */
     public function agregarLinea(array $data): FacturaDetalle
     {
         $detalle = $this->detalles()->create($data);
-        // Si tu modelo FacturaDetalle ya calcula importes en events, no hace falta llamar nada más.
         $this->recalcularTotales()->save();
         return $detalle;
     }
 
-    /** Recalcula subtotal/impuestos/total/pagado/saldo y ajusta el estado (si no está anulada). */
+    /** Recalcula subtotal/impuestos/total/pagado/saldo y ajusta estado. */
     public function recalcularTotales(): self
     {
         $sub = (float) $this->detalles()->sum('importe_base');
@@ -126,11 +161,38 @@ class factura extends Model
         return $this;
     }
 
-   
     public function registrarPago(array $data): FacturaPago
     {
         $pago = $this->pagos()->create($data);
         $this->recalcularTotales()->save();
         return $pago;
+    }
+    public function cuentaCobro()
+    {
+        return $this->belongsTo(\App\Models\CuentasContables\PlanCuentas::class, 'cuenta_cobro_id');
+    }
+    public function socioNegocio(): BelongsTo
+    {
+        return $this->belongsTo(SocioNegocio::class, 'socio_negocio_id');
+    }
+    public function registrarPagosDistribuidos(array $items, string $fecha, ?string $notas = null): void
+    {
+        DB::transaction(function () use ($items, $fecha, $notas) {
+            foreach ($items as $i) {
+                $medioId = $i['medio_pago_id'] ?? null;
+                $medio   = $medioId ? MedioPagos::find($medioId) : null;
+
+                $this->pagos()->create([
+                    'fecha'         => $fecha,
+                    'medio_pago_id' => $medioId,
+                    'metodo'        => $medio?->codigo,               
+                    'monto'         => (float) ($i['monto'] ?? 0),
+                    'referencia'    => $i['referencia'] ?? null,
+                    'notas'         => $notas,
+                ]);
+            }
+
+            $this->recalcularTotales()->save();
+        });
     }
 }

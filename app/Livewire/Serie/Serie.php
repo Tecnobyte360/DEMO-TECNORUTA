@@ -9,9 +9,15 @@ use Illuminate\Support\Facades\DB;
 use Masmerise\Toaster\PendingToast;
 use Illuminate\Pagination\LengthAwarePaginator;
 
+// 👇 Alias para no chocar con el nombre del componente
+use App\Models\Serie\Serie as SerieModel;
+
 class Serie extends Component
 {
     use WithPagination;
+
+    /** Paginación con Tailwind */
+    protected $paginationTheme = 'tailwind';
 
     // -------- Listado / filtros
     public string $search = '';
@@ -35,6 +41,7 @@ class Serie extends Component
 
     public bool $showModal = false;
 
+    /** Sincroniza filtros en la URL */
     protected $queryString = ['search', 'perPage'];
 
     // -------- Reglas de validación base (de formulario)
@@ -71,13 +78,13 @@ class Serie extends Component
     public function render()
     {
         try {
-            $items = Serie::query()
+            $items = SerieModel::query()
                 ->when(trim($this->search) !== '', function ($q) {
                     $s = '%' . trim($this->search) . '%';
-                    $q->where('nombre', 'like', $s)
+                    $q->where(fn($w) => $w->where('nombre', 'like', $s)
                         ->orWhere('prefijo', 'like', $s)
                         ->orWhere('resolucion', 'like', $s)
-                        ->orWhere('documento', 'like', $s);
+                        ->orWhere('documento', 'like', $s));
                 })
                 ->orderByDesc('id')
                 ->paginate($this->perPage);
@@ -114,23 +121,23 @@ class Serie extends Component
     public function edit(int $id): void
     {
         try {
-            $m = Serie::findOrFail($id);
+            $m = SerieModel::findOrFail($id);
 
             $this->fill([
                 'serie_id'     => $m->id,
                 'documento'    => $m->documento ?? 'factura',
-                'es_default'   => (bool)$m->es_default,
+                'es_default'   => (bool) $m->es_default,
 
-                'nombre'       => (string)$m->nombre,
-                'prefijo'      => (string)$m->prefijo,
-                'rango_desde'  => (int)$m->desde,
-                'rango_hasta'  => (int)$m->hasta,
-                'proximo_ui'   => (int)$m->proximo,
-                'longitud'     => (int)($m->longitud ?? 6),
-                'resolucion'   => (string)($m->resolucion ?? ''),
+                'nombre'       => (string) $m->nombre,
+                'prefijo'      => (string) $m->prefijo,
+                'rango_desde'  => (int) $m->desde,
+                'rango_hasta'  => (int) $m->hasta,
+                'proximo_ui'   => (int) $m->proximo,
+                'longitud'     => (int) ($m->longitud ?? 6),
+                'resolucion'   => (string) ($m->resolucion ?? ''),
                 'fecha_inicio' => optional($m->vigente_desde)?->toDateString(),
                 'fecha_fin'    => optional($m->vigente_hasta)?->toDateString(),
-                'activo'       => (bool)$m->activa,
+                'activo'       => (bool) $m->activa,
             ]);
 
             $this->showModal = true;
@@ -154,48 +161,48 @@ class Serie extends Component
             DB::transaction(function () {
                 // Lock si edita, para no tener carreras con 'proximo'
                 $current = $this->serie_id
-                    ? Serie::whereKey($this->serie_id)->lockForUpdate()->first()
+                    ? SerieModel::whereKey($this->serie_id)->lockForUpdate()->first()
                     : null;
 
-                $desde = (int)$this->rango_desde;
-                $hasta = (int)$this->rango_hasta;
+                $desde = (int) $this->rango_desde;
+                $hasta = (int) $this->rango_hasta;
 
-                // Máximo ya usado en facturas
+                // Máximo ya usado en facturas (ajusta a la ruta/nombre real de tu modelo)
                 $maxUsado = $current
                     ? \App\Models\Factura\factura::where('serie_id', $current->id)->max('numero')
                     : null;
 
-                $minPermitido = $maxUsado ? ((int)$maxUsado + 1) : $desde;
+                $minPermitido = $maxUsado ? ((int) $maxUsado + 1) : $desde;
 
                 // Ajusta próximo
-                $proximo = max((int)$this->proximo_ui, $minPermitido);
+                $proximo = max((int) $this->proximo_ui, $minPermitido);
                 $proximo = min($proximo, $hasta);
 
                 // Un solo default por documento: desmarca otros si corresponde
                 if ($this->es_default) {
-                    Serie::where('documento', $this->documento)
+                    SerieModel::where('documento', $this->documento)
                         ->when($this->serie_id, fn($q) => $q->where('id', '<>', $this->serie_id))
                         ->update(['es_default' => false]);
                 }
 
-                $serie = Serie::updateOrCreate(
+                $serie = SerieModel::updateOrCreate(
                     ['id' => $this->serie_id],
                     [
                         'documento'     => $this->documento,
-                        'es_default'    => (bool)$this->es_default,
+                        'es_default'    => (bool) $this->es_default,
 
                         'nombre'        => $this->nombre,
                         'prefijo'       => $this->prefijo,
                         'desde'         => $desde,
                         'hasta'         => $hasta,
                         'proximo'       => $proximo,
-                        'longitud'      => (int)$this->longitud,
+                        'longitud'      => (int) $this->longitud,
 
                         'resolucion'    => $this->resolucion,
                         'vigente_desde' => $this->fecha_inicio,
                         'vigente_hasta' => $this->fecha_fin,
 
-                        'activa'        => (bool)$this->activo,
+                        'activa'        => (bool) $this->activo,
                     ]
                 );
 
@@ -206,9 +213,8 @@ class Serie extends Component
             $this->resetForm();
             PendingToast::create()->success()->message('Serie guardada correctamente.')->duration(4500);
         } catch (\Illuminate\Validation\ValidationException $ve) {
-            // Livewire ya muestra mensajes en campos; agregamos un toast general
             PendingToast::create()->error()->message('Revisa los campos marcados.')->duration(6000);
-            throw $ve; // dejar que Livewire pinte los errores por campo
+            throw $ve; // deja que Livewire pinte errores por campo
         } catch (\Throwable $e) {
             report($e);
 
@@ -233,7 +239,7 @@ class Serie extends Component
     public function toggleActivo(int $id): void
     {
         try {
-            $m = Serie::findOrFail($id);
+            $m = SerieModel::findOrFail($id);
             $m->activa = ! $m->activa;
             $m->save();
 
@@ -248,9 +254,9 @@ class Serie extends Component
     public function delete(int $id): void
     {
         try {
-            $m = Serie::findOrFail($id);
+            $m = SerieModel::findOrFail($id);
 
-            // Protección: no eliminar si tiene facturas asociadas
+            // Protección: no eliminar si tiene facturas asociadas (ajusta a tu modelo real)
             $tieneDocs = \App\Models\Factura\factura::where('serie_id', $id)->exists();
             if ($tieneDocs) {
                 PendingToast::create()->warning()->message('No puedes eliminar una serie con documentos emitidos.')->duration(7000);
@@ -269,19 +275,19 @@ class Serie extends Component
     public function previewSiguiente(?int $id = null): string
     {
         try {
-            $long = (int)($this->longitud ?: 6);
+            $long = (int) ($this->longitud ?: 6);
 
             if ($id) {
-                $s = Serie::find($id);
+                $s = SerieModel::find($id);
                 if (!$s) return '';
-                $n = max((int)$s->proximo, (int)$s->desde);
-                $num = str_pad((string)$n, $long, '0', STR_PAD_LEFT);
+                $n = max((int) $s->proximo, (int) $s->desde);
+                $num = str_pad((string) $n, $long, '0', STR_PAD_LEFT);
                 return ($s->prefijo ? "{$s->prefijo}-" : '') . $num;
             }
 
-            $n = max((int)$this->proximo_ui ?: $this->rango_desde, $this->rango_desde);
-            $n = min($n, (int)$this->rango_hasta);
-            $num = str_pad((string)$n, $long, '0', STR_PAD_LEFT);
+            $n = max((int) ($this->proximo_ui ?: $this->rango_desde), $this->rango_desde);
+            $n = min($n, (int) $this->rango_hasta);
+            $num = str_pad((string) $n, $long, '0', STR_PAD_LEFT);
 
             return ($this->prefijo ? "{$this->prefijo}-" : '') . $num;
         } catch (\Throwable $e) {
@@ -320,10 +326,10 @@ class Serie extends Component
             ]);
         }
 
-        // Si edita: no se puede poner HASTA por debajo del máximo ya usado
+        // Si edita: no se puede poner HASTA por debajo del máximo ya usado (ajusta a tu modelo real)
         if ($this->serie_id) {
             $maxUsado = \App\Models\Factura\factura::where('serie_id', $this->serie_id)->max('numero');
-            if ($maxUsado && (int)$this->rango_hasta < (int)$maxUsado) {
+            if ($maxUsado && (int) $this->rango_hasta < (int) $maxUsado) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'rango_hasta' => 'El valor "Hasta" no puede ser menor que el último número emitido (' . $maxUsado . ').',
                 ]);

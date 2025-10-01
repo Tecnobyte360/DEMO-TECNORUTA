@@ -3,84 +3,145 @@
 namespace App\Models\SocioNegocio;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Municipio;
+use App\Models\CondicionPago\CondicionPago;
 
 class SocioNegocio extends Model
 {
+    protected $table = 'socio_negocios';
+
     protected $fillable = [
-        'razon_social',
-        'nit',
-        'telefono_fijo',
-        'telefono_movil',
-        'direccion',
-        'correo',
-        'municipio_barrio',
-        'saldo_pendiente',
-        'Tipo', // ← en BD está con T mayúscula
+        // Datos base
+        'razon_social','nit','telefono_fijo','telefono_movil','direccion','correo',
+        'municipio_barrio','saldo_pendiente','Tipo',
+        'tipo_persona','regimen_iva','regimen_simple','municipio_id',
+        'actividad_economica','direccion_medios_magneticos',
+
+        // FK nueva (opcional si ya la tienes)
+        'condicion_pago_id',
+
+        // Campos legado (si los mantienes en la tabla)
+        'condicion_pago','plazo_dias','interes_mora_pct','limite_credito',
+        'tolerancia_mora_dias','dia_corte',
     ];
 
     protected $casts = [
-        'Tipo' => 'string',
+        'regimen_simple'        => 'boolean',
+        'plazo_dias'            => 'integer',
+        'interes_mora_pct'      => 'float',
+        'limite_credito'        => 'float',
+        'tolerancia_mora_dias'  => 'integer',
+        'dia_corte'             => 'integer',
+        'condicion_pago_id'     => 'integer',
     ];
 
-    /**
-     * Alias en minúsculas para la columna `Tipo` (C=cliente, P=proveedor)
-     * Así puedes usar $socio->tipo en el resto del código.
-     */
-    public function getTipoAttribute()
+    /* ====== Atributo Tipo (C/P) ====== */
+    public function getTipoAttribute(): ?string
     {
         return isset($this->attributes['Tipo'])
             ? strtoupper(trim($this->attributes['Tipo']))
             : null;
     }
-
-    public function setTipoAttribute($value)
+    public function setTipoAttribute($value): void
     {
-        // Si en algún punto haces $socio->tipo = 'C'/'P', guardará en `Tipo`
-        $this->attributes['Tipo'] = strtoupper(trim($value));
+        $this->attributes['Tipo'] = strtoupper(trim((string)$value));
     }
 
-    /** Helpers */
-    public function isCliente(): bool
+    /* ====== Relaciones ====== */
+    public function cuentas()
     {
-        return $this->tipo === 'C';
-    }
-    public function isProveedor(): bool
-    {
-        return $this->tipo === 'P';
+        return $this->hasOne(SocioNegocioCuenta::class, 'socio_negocio_id')->withDefault();
     }
 
-    /** Scopes útiles */
-    public function scopeClientes($q)
+    public function direcciones()
     {
-        return $q->where('Tipo', 'C');
-    }
-    public function scopeProveedores($q)
-    {
-        return $q->where('Tipo', 'P');
+        return $this->hasMany(\App\Models\SocioNegocio\SocioDireccion::class, 'socio_negocio_id');
     }
 
-    /** Relaciones */
     public function pedidos()
     {
         return $this->hasMany(\App\Models\Pedidos\Pedido::class, 'socio_negocio_id');
     }
 
-    /** Atributo calculado: saldo pendiente de crédito */
-    public function getSaldoPendienteCreditoAttribute()
+    public function municipio()
     {
-        return $this->pedidos
-            ->where('tipo_pago', 'credito')
-            ->sum(fn($pedido) => $pedido->montoPendiente());
+        return $this->belongsTo(Municipio::class, 'municipio_id');
     }
 
-    /** Relación de pedidos de crédito en estado pendiente (si te sirve) */
-    public function creditosPendientes()
+    public function condicionPago()
     {
-        return $this->hasMany(\App\Models\Pedidos\Pedido::class, 'socio_negocio_id')
-            ->where('tipo_pago', 'credito')
-            ->where('estado', 'pendiente');
+        return $this->belongsTo(CondicionPago::class, 'condicion_pago_id')->withDefault();
     }
 
-public function getNombreAttribute() { return $this->razon_social; }
+    /* ====== Scopes / Helpers ====== */
+    public function isCliente(): bool { return $this->tipo === 'C'; }
+    public function isProveedor(): bool { return $this->tipo === 'P'; }
+    public function scopeClientes($q){ return $q->where('Tipo','C'); }
+    public function scopeProveedores($q){ return $q->where('Tipo','P'); }
 
+    /** Condiciones de pago normalizadas (prioriza la FK; cae a legado) */
+    public function getCondicionesPagoEfectivasAttribute(): array
+    {
+        if ($this->condicionPago && ($this->condicion_pago_id || $this->condicionPago->nombre)) {
+            return [
+                'id'                   => $this->condicionPago->id,
+                'nombre'               => $this->condicionPago->nombre,
+                'tipo'                 => $this->condicionPago->tipo,
+                'plazo_dias'           => $this->condicionPago->plazo_dias,
+                'interes_mora_pct'     => $this->condicionPago->interes_mora_pct,
+                'limite_credito'       => $this->condicionPago->limite_credito,
+                'tolerancia_mora_dias' => $this->condicionPago->tolerancia_mora_dias,
+                'dia_corte'            => $this->condicionPago->dia_corte,
+                'notas'                => $this->condicionPago->notas,
+                'activo'               => (bool)$this->condicionPago->activo,
+                'source'               => 'fk',
+            ];
+        }
+
+        return [
+            'id'                   => null,
+            'nombre'               => null,
+            'tipo'                 => $this->condicion_pago ?: 'contado',
+            'plazo_dias'           => $this->plazo_dias,
+            'interes_mora_pct'     => $this->interes_mora_pct,
+            'limite_credito'       => $this->limite_credito,
+            'tolerancia_mora_dias' => $this->tolerancia_mora_dias,
+            'dia_corte'            => $this->dia_corte,
+            'notas'                => null,
+            'activo'               => true,
+            'source'               => 'legacy',
+        ];
+    }
+
+    public function admiteCredito(): bool
+    {
+        return strtolower((string) data_get($this, 'condiciones_pago_efectivas.tipo')) === 'credito';
+    }
+
+    public function plazoEfectivo(): ?int
+    {
+        return $this->admiteCredito()
+            ? (int) (data_get($this, 'condiciones_pago_efectivas.plazo_dias') ?? 30)
+            : null;
+    }
+
+    public function moraMensualPct(): ?float
+    {
+        $v = data_get($this, 'condiciones_pago_efectivas.interes_mora_pct');
+        return is_null($v) ? null : (float) $v;
+    }
+
+    /* ====== Atajos direcciones ====== */
+    public function direccionesEntrega()
+    { return $this->direcciones()->where('tipo','entrega'); }
+
+    public function direccionEntregaPrincipal()
+    { return $this->direccionesEntrega()->where('es_principal', true)->first(); }
+
+    public function getDireccionEntregaPrincipalAttribute()
+    { return $this->direccionesEntrega()->where('es_principal', true)->first(); }
+
+    /* ====== Alias ====== */
+    public function getNombreAttribute()
+    { return $this->razon_social; }
 }

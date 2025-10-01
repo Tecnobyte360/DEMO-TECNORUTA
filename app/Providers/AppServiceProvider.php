@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(): void    
     {
         Schema::defaultStringLength(191); 
 
@@ -38,4 +38,5 @@ class AppServiceProvider extends ServiceProvider
             $view->with('empresaActual', $empresa);
         });
     }
+    // *
 }

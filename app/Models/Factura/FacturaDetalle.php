@@ -12,7 +12,7 @@ class FacturaDetalle extends Model
     protected $fillable = [
         'factura_id','producto_id','bodega_id','descripcion',
         'cantidad','precio_unitario','descuento_pct','impuesto_pct',
-        'importe_base','importe_impuesto','importe_total',
+        'importe_base','importe_impuesto','importe_total','cuenta_ingreso_id'
     ];
 
     protected $casts = [
@@ -23,6 +23,7 @@ class FacturaDetalle extends Model
         'importe_base'     => 'decimal:2',
         'importe_impuesto' => 'decimal:2',
         'importe_total'    => 'decimal:2',
+        'cuenta_ingreso_id'=> 'decimal:2',
     ];
 
     public function factura(): BelongsTo

@@ -26,6 +26,8 @@ class Empresas extends Component
 
     public ?string $color_primario = null;
     public ?string $color_secundario = null;
+    public bool $usar_gradiente = false;     // <— NUEVO
+    public ?int $grad_angle = 135;           // <— NUEVO (0–360)
     public bool $is_activa = true;
 
     // Archivos (subidas temporales)
@@ -40,28 +42,35 @@ class Empresas extends Component
     protected function rules(): array
     {
         return [
-            'nombre' => ['required','string','max:255'],
-            'nit' => ['nullable','string','max:50'],
-            'email' => ['nullable','email','max:255'],
-            'telefono' => ['nullable','string','max:50'],
-            'sitio_web' => ['nullable','url','max:255'],
-            'direccion' => ['nullable','string','max:255'],
-            'color_primario' => ['nullable','regex:/^#?[0-9A-Fa-f]{6}$/'],
-            'color_secundario' => ['nullable','regex:/^#?[0-9A-Fa-f]{6}$/'],
-            'is_activa' => ['boolean'],
+            'nombre'           => ['required','string','max:255'],
+            'nit'              => ['nullable','string','max:50'],
+            'email'            => ['nullable','email','max:255'],
+            'telefono'         => ['nullable','string','max:50'],
+            'sitio_web'        => ['nullable','url','max:255'],
+            'direccion'        => ['nullable','string','max:255'],
 
-            'logo' => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
-            'logo_dark' => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
-            'favicon' => ['nullable','mimes:png,jpg,jpeg,webp,ico','max:1024'],
+            // hex #RRGGBB (con o sin #)
+            'color_primario'   => ['nullable','regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'color_secundario' => ['nullable','regex:/^#?[0-9A-Fa-f]{6}$/'],
+
+            // gradiente
+            'usar_gradiente'   => ['boolean'],
+            'grad_angle'       => ['nullable','integer','min:0','max:360'],
+
+            'is_activa'        => ['boolean'],
+
+            'logo'             => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
+            'logo_dark'        => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
+            'favicon'          => ['nullable','mimes:png,jpg,jpeg,webp,ico','max:1024'],
         ];
     }
 
-    public function updatingQ() { $this->resetPage(); } // al buscar, regresa a página 1
+    public function updatingQ() { $this->resetPage(); }
     public function updatingPerPage() { $this->resetPage(); }
 
     public function mount(): void
     {
-        // Si quieres editar el primer registro al abrir, descomenta:
+        // Si quieres precargar una empresa:
         // $this->empresa = Empresa::first();
         // if ($this->empresa) $this->fillFromModel($this->empresa);
     }
@@ -79,9 +88,21 @@ class Empresas extends Component
         $this->fillFromModel($model);
     }
 
+    public function cancel(): void
+    {
+        $this->createNew();
+    }
+
     public function save(): void
     {
         $this->validate();
+
+        // Si van a usar gradiente, exige ambos colores
+        if ($this->usar_gradiente && (!$this->color_primario || !$this->color_secundario)) {
+            $this->addError('color_primario', 'Debes definir color primario y secundario para el gradiente.');
+            $this->addError('color_secundario', 'Debes definir color primario y secundario para el gradiente.');
+            return;
+        }
 
         $empresa = $this->empresa ?? new Empresa();
 
@@ -92,8 +113,15 @@ class Empresas extends Component
             'telefono'         => $this->telefono,
             'sitio_web'        => $this->sitio_web,
             'direccion'        => $this->direccion,
+
+            // Colores normalizados a #rrggbb
             'color_primario'   => $this->normalizeHex($this->color_primario),
             'color_secundario' => $this->normalizeHex($this->color_secundario),
+
+            // Gradiente
+            'usar_gradiente'   => $this->usar_gradiente,
+            'grad_angle'       => $this->grad_angle ?? 135,
+
             'is_activa'        => $this->is_activa,
         ]);
 
@@ -111,14 +139,13 @@ class Empresas extends Component
         $this->empresa = $empresa;
 
         session()->flash('ok', 'Configuración de empresa guardada correctamente.');
-        $this->resetUploads(); // limpia inputs file
+        $this->resetUploads();
     }
 
     public function delete(int $id): void
     {
         $empresa = Empresa::findOrFail($id);
 
-        // Elimina archivos asociados
         foreach (['logo_path','logo_dark_path','favicon_path'] as $attr) {
             if ($empresa->$attr && Storage::disk('public')->exists($empresa->$attr)) {
                 Storage::disk('public')->delete($empresa->$attr);
@@ -126,7 +153,6 @@ class Empresas extends Component
         }
         $empresa->delete();
 
-        // Si estabas editando esta misma, limpia el formulario
         if ($this->empresa?->id === $id) {
             $this->createNew();
         }
@@ -151,22 +177,34 @@ class Empresas extends Component
         return '#'.strtolower($hex);
     }
 
-    private function fillFromModel(Empresa $m): void
-    {
-        $this->fill($m->only([
-            'nombre','nit','email','telefono','sitio_web','direccion',
-            'color_primario','color_secundario','is_activa'
-        ]));
-        $this->resetUploads();
-    }
+  private function fillFromModel(Empresa $m): void
+{
+    $this->fill([
+        'nombre'           => $m->nombre,
+        'nit'              => $m->nit,
+        'email'            => $m->email,
+        'telefono'         => $m->telefono,
+        'sitio_web'        => $m->sitio_web,
+        'direccion'        => $m->direccion,
+        'color_primario'   => $m->color_primario,
+        'color_secundario' => $m->color_secundario,
+        'usar_gradiente'   => (bool) ($m->usar_gradiente ?? false),
+        'grad_angle'       => (int)  ($m->grad_angle ?? 135),
+        'is_activa'        => (bool) ($m->is_activa ?? true),
+    ]);
+
+    $this->resetUploads();
+}
+
 
     private function resetForm(): void
     {
         $this->reset([
             'nombre','nit','email','telefono','sitio_web','direccion',
-            'color_primario','color_secundario','is_activa',
+            'color_primario','color_secundario','usar_gradiente','grad_angle','is_activa',
         ]);
         $this->is_activa = true;
+        $this->grad_angle = 135;
         $this->resetUploads();
     }
 
@@ -177,7 +215,7 @@ class Empresas extends Component
 
     public function render()
     {
-         $rows = Empresa::query()
+        $rows = Empresa::query()
             ->when($this->q !== '', function($q){
                 $q->where(function($sub){
                     $sub->where('nombre','like',"%{$this->q}%")
@@ -191,5 +229,4 @@ class Empresas extends Component
 
         return view('livewire.configuracion-empresas.empresas',compact('rows'));
     }
-    
 }

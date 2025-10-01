@@ -12,7 +12,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('factura_id');
 
             $table->date('fecha');
-            $table->string('metodo', 40)->nullable();
+            $table->string('metodo', 120)->nullable();
             $table->string('referencia', 120)->nullable();
             $table->decimal('monto', 14, 2);
 

@@ -15,12 +15,19 @@ use App\Http\Controllers\FacturaTicketController;
 use App\Http\Controllers\Usuarios\UsuariosController;
 use App\Livewire\Bodegas\Bodega;
 use App\Livewire\Bodegas\Edit;
+use App\Livewire\Catalogos\CiiuActividades;
+use App\Livewire\Catalogos\Municipios;
 use App\Livewire\Categoria\Categorias;
 use App\Livewire\Categorias\IndexCategorias;
+use App\Livewire\CondicionesPago\Condicionpago;
+use App\Livewire\CondicionPagos\CondicionesPagos;
 use App\Livewire\ConfiguracionEmpresas\Empresas;
+use App\Livewire\Contabilidad\Asientos;
 use App\Livewire\Cotizaciones\Cotizacion;
 use App\Livewire\CuentasContables\PlanCuentas;
 use App\Livewire\Facturas\FacturaForm;
+use App\Livewire\Facturas\Index;
+use App\Livewire\Facturas\NotaCreditoForm;
 use App\Livewire\Finanzas\Finanzas;
 use App\Livewire\Finanzas\GastosEmpresa;
 use App\Livewire\Finanzas\TiposGasto;
@@ -29,6 +36,7 @@ use App\Livewire\Inventario\DevolucionesMercancia;
 use App\Livewire\Inventario\EntradasMercancia;
 use App\Livewire\Inventario\Salidas;
 use App\Livewire\MaestroRutas\MaestroRutas;
+use App\Livewire\MediosPagos\MediosPagos;
 use App\Livewire\NormasReparto\NormasReparto;
 use App\Livewire\OperacionesStock\OperacionesStock;
 use App\Livewire\Productos\Productos;
@@ -242,18 +250,34 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/Finanzas', Finanzas::class)->name('Finanzas');
     Route::get('/Gastos', GastosEmpresa::class)->name('Gastos');
     Route::get('/tiposGastos', TiposGasto::class)->name('tiposGastos');
-    Route::get('/Empresas',Empresas::class)->name('Empresas');
+    Route::get('/Empresas', Empresas::class)->name('Empresas');
 
     //cotizaciones
     Route::get('/Cotizaciones', Cotizacion::class)->name('Cotizaciones');
-     Route::get('/Facturacion', FacturaForm::class)->name('Facturacion');
-          Route::get('/SeriesDocumentos', Serie::class)->name('SeriesDocumentos');
-          Route::get('/facturas/{factura}/ticket', [FacturaTicketController::class, 'show'])
+    Route::get('/Facturacion', Index::class)->name('Facturacion');
+    Route::get('/Notas-credito-clientes', NotaCreditoForm::class)->name('notascreditoclientes');
+    Route::get('/SeriesDocumentos', Serie::class)->name('SeriesDocumentos');
+    Route::get('/facturas/{factura}/ticket', [FacturaTicketController::class, 'show'])
         ->whereNumber('factura')
         ->name('facturas.ticket');
-        Route::post('/facturas/{factura}/print-pos', [FacturaPosPrintController::class, 'print'])
-    ->name('facturas.print-pos');
-     Route::get('/normas-reparto', NormasReparto::class)->name('normas-reparto.index');
+    Route::post('/facturas/{factura}/print-pos', [FacturaPosPrintController::class, 'print'])
+        ->name('facturas.print-pos');
+    Route::get('/normas-reparto', NormasReparto::class)->name('normas-reparto.index');
     Route::get('/Cuentas-contables', PlanCuentas::class)->name('Cuentas-contables');
-       Route::get('/Impuestos', Impuesto::class)->name('Impuestos');
+    Route::get('/Impuestos', Impuesto::class)->name('Impuestos');
+//     Route::get('/catalogos/municipios', Municiopios::class)->name('catalogos/municipios');
+// Route::get('/catalogos/ciiu', CiiuActividades::class)
+//     ->name('catalogos.ciiu');
+
+    Route::get('/contabilidad/asientos', Asientos::class)
+        ->name('asientos.index');
+      Route::get('/condiciones-pago', CondicionesPagos::class)
+        ->name('condicionespago');
+
+        Route::get('/facturas/{id}/editar', \App\Livewire\Facturas\FacturaForm::class)
+    ->name('facturas.edit');
+
+          Route::get('/medios-pagos', MediosPagos::class)
+        ->name('Mediospagos');
+
 });

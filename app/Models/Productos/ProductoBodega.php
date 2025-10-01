@@ -28,4 +28,8 @@ class ProductoBodega extends Model
     {
         return $this->belongsTo(\App\Models\bodegas::class);
     }
+    public function scopeFila($query, int $productoId, int $bodegaId)
+{
+    return $query->where('producto_id', $productoId)->where('bodega_id', $bodegaId);
+}
 }

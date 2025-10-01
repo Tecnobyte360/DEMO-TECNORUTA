@@ -3,79 +3,111 @@
 namespace App\Livewire\Bodegas;
 
 use App\Models\bodegas;
+use Livewire\Attributes\On;
 use Livewire\Component;
+use Illuminate\Validation\Rule;
 
 class Bodega extends Component
 {
-    public $nombre, $ubicacion, $activo, $bodega_id;
-    public $bodegas;
-    public $showCreateModal = false;
-    public $showEditModal = false;
-    public $bodegaId; // Definir la propiedad bodegaId para ser usada en la vista
+    // Lista
+    public $bodegas = [];
 
-    protected $rules = [
-        'nombre' => 'required|string|max:255',
-        'ubicacion' => 'required|string|max:255',
-        'activo' => 'required|boolean',
+    // Formulario
+    public ?int $bodega_id = null;
+    public string $nombre = '';
+    public string $ubicacion = '';
+    public bool $activo = true;
+
+    // UI
+    public bool $showModal = false;
+
+    protected function rules(): array
+    {
+        return [
+            'nombre'    => ['required', 'string', 'max:255'],
+            'ubicacion' => ['required', 'string', 'max:255'],
+            'activo'    => ['boolean'],
+        ];
+    }
+
+    protected array $messages = [
+        'nombre.required'    => 'El nombre es obligatorio.',
+        'ubicacion.required' => 'La ubicación es obligatoria.',
     ];
 
-    public function loadRoles()
+    public function mount(): void
     {
-        // Puedes agregar lógica aquí para cargar roles o datos adicionales
-        // Ejemplo: $this->roles = Role::all();
+        $this->listar();
     }
 
-    public function mount()
+    #[On('listarBodegas')]
+    public function listar(): void
     {
-        $this->loadRoles();
-        $this->bodegas = bodegas::all() ?? collect();
+        $this->bodegas = bodegas::orderBy('id','desc')->get()->toArray();
     }
 
-    public function listarBodegas()
+    public function abrirCrear(): void
     {
-        $this->bodegas = bodegas::all();
+        $this->resetForm();
+        $this->showModal = true;
     }
 
-    public function guardar()
+    public function abrirEditar(int $id): void
+    {
+        $m = bodegas::findOrFail($id);
+
+        $this->bodega_id = $m->id;
+        $this->nombre    = (string) $m->nombre;
+        $this->ubicacion = (string) $m->ubicacion;
+        $this->activo    = (bool) $m->activo;
+
+        $this->showModal = true;
+    }
+
+    public function guardar(): void
     {
         $this->validate();
 
         bodegas::updateOrCreate(
             ['id' => $this->bodega_id],
-            ['nombre' => $this->nombre, 'ubicacion' => $this->ubicacion, 'activo' => $this->activo]
+            [
+                'nombre'    => $this->nombre,
+                'ubicacion' => $this->ubicacion,
+                'activo'    => $this->activo,
+            ]
         );
 
-        $this->resetInput();
-        $this->listarBodegas();
-        $this->showCreateModal = false; // Cerrar el modal después de guardar
+        $this->dispatch('toast', type: 'success', message: 'Bodega guardada correctamente.');
+        $this->dispatch('listarBodegas'); // refresca lista (también llama a listar() en este mismo comp)
+
+        $this->showModal = false;
+        $this->resetForm();
+        $this->listar(); // por si no usas el evento arriba, asegura refresco
     }
 
-    public function editar($id)
+    public function toggleEstado(int $id): void
     {
-        $bodega = bodegas::find($id);
-    
-        if ($bodega) {
-            $this->bodega_id = $bodega->id;
-            $this->emit('cargarBodega', $bodega->id); // Enviar el ID al componente Edit
-            $this->showEditModal = true;
-        }
-    }
-    
-    
-    
-    public function eliminar($id)
-    {
-        bodegas::destroy($id);
-        $this->listarBodegas();
+        $m = bodegas::findOrFail($id);
+        $m->activo = ! $m->activo;
+        $m->save();
+
+        $this->dispatch('toast', type: 'info', message: $m->activo ? 'Bodega activada.' : 'Bodega desactivada.');
+        $this->listar();
     }
 
-    public function resetInput()
+    public function eliminar(int $id): void
     {
+        bodegas::whereKey($id)->delete();
+        $this->dispatch('toast', type: 'success', message: 'Bodega eliminada.');
+        $this->listar();
+    }
+
+    public function resetForm(): void
+    {
+        $this->bodega_id = null;
         $this->nombre = '';
         $this->ubicacion = '';
-        $this->activo = 1;
-        $this->bodega_id = null;
-        $this->bodegaId = null; // Resetear bodegaId
+        $this->activo = true;
     }
 
     public function render()

@@ -22,9 +22,9 @@
             <!-- Close button -->
             <button class="lg:hidden text-gray-500 hover:text-gray-400" @click.stop="sidebarOpen = !sidebarOpen" aria-controls="sidebar" :aria-expanded="sidebarOpen">
                 <span class="sr-only">Close sidebar</span>
-                {{-- <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10.7 18.7l1.4-1.4L7.8 13H20v-2H7.8l4.3-4.3-1.4-1.4L4 12z" />
-                </svg> --}}
+                </svg>
             </button>
             <!-- Logo -->
      <div class="flex justify-center w-full py-6">
@@ -357,6 +357,22 @@
              lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Facturación</span>
                                     </a>
                                 </li>
+                                <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('asientos.index')){{ 'text-violet-500!' }}@endif" href="{{ route('asientos.index') }}">
+                                        <span class="text-sm font-medium ml-4 text-white 
+             lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Asientos contables</span>
+                                    </a>
+                                </li>
+                               <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('notascreditoclientes')){{ 'text-violet-500!' }}@endif" href="{{ route('notascreditoclientes') }}">
+                                        <span class="text-sm font-medium ml-4 text-white 
+             lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">Notas credito clientes</span>
+                                    </a>
+                                </li>
+
+                               
+
+
                                
                             </ul>
                         </div>
@@ -472,6 +488,27 @@
                                         </span>
                                     </a>
                                 </li>
+ <li class="mb-1 last:mb-0">
+                                
+         <li class="mb-1 last:mb-0">
+                                    <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('condicionespago')) text-red-500! @endif" 
+                                    href="{{ route('condicionespago') }}">
+                                        <span class="text-sm font-medium ml-4 text-white 
+             lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                           Condiciones Pago
+                                        </span>
+                                    </a>
+                                </li>
+ <li class="mb-1 last:mb-0">
+        <a class="block text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition truncate @if(Route::is('Mediospagos')) text-red-500! @endif" 
+                                    href="{{ route('Mediospagos') }}">
+                                        <span class="text-sm font-medium ml-4 text-white 
+             lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                           Medios de pago
+                                        </span>
+                                    </a>
+                                </li>
+ <li class="mb-1 last:mb-0">
 
 
                                            
